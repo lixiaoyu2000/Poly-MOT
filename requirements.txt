@@ -1,0 +1,11 @@
+numba
+sympy
+motmetrics==1.1.3
+numpy
+pandas>=0.24
+nuscenes-devkit
+shapely
+pyquaternion
+line_profiler
+lap
+
