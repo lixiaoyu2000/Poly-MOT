@@ -35,9 +35,10 @@ def dictdet2array(dets: List[dict], *attrs) -> Union[List, np.array]:
     return listdets, np.array(listdets)
 
 
-def arraydet2box(dets: np.array) -> Union[List[nusc_box], np.array]:
+def arraydet2box(dets: np.array) -> Union[np.array[nusc_box], np.array]:
     # det -> (x, y, z, w, l, h, vx, vy, ry(orientation, 1x4), det_score, class_label)
-    assert len(det) == 14, "The number of observed states must satisfy 14"
+    if dets.ndim == 1: dets = dets[None, :]
+    assert dets.shape[1] == 14, "The number of observed states must satisfy 14"
     nusc_boxes, boxes_bottom_corners = [], []
     for idx, det in enumerate(dets):
         curr_box = nusc_box(center=det[0:3], size=det[3:6], rotation=det[8:12],

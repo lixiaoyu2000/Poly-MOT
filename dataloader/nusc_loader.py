@@ -28,7 +28,7 @@ class NuScenesloader:
         self.NMS_type, self.NMS_metric = config['preprocessing']['NMS_type'], config['preprocessing']['NMS_metric']
         self.seq_id = self.frame_id = 0
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> dict:
         """
         data_info(dict): {
             'is_first_frame': bool
@@ -93,5 +93,5 @@ class NuScenesloader:
         }
         return data_info
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.all_sample_token)

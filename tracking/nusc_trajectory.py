@@ -5,9 +5,8 @@ The 'state' here is generalized, including attribute info, motion info, geometri
 """
 
 import numpy as np
-from geometry.nusc_box import nusc_box
-from nusc_object import FrameObject
 from nusc_life_manage import LifeManagement
+from motion_module.nusc_object import FrameObject
 from motion_module import LinearKalmanFilter, ExtendKalmanFilter
 
 

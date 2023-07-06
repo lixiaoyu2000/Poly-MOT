@@ -8,8 +8,6 @@ TODO: delete debug log in the release version
 
 import pdb
 import numpy as np
-from typing import Tuple, List, Union
-from geometry.nusc_box import nusc_box
 from nusc_trajectory import Trajectory
 from data.script.NUSC_CONSTANT import *
 from geometry.nusc_distance import iou_bev, iou_3d, giou_bev, giou_3d, d_eucl
