@@ -3,6 +3,7 @@ Tracker, Core of Poly-MOT.
 Tracklet prediction and punishment, cost matrix construction, tracking id assignment, tracklet update and init, and output file
 
 TODO: consider tentative tracklets, Reorganize the output format
+TODO: delete debug log in the release version
 """
 
 import pdb
@@ -56,8 +57,7 @@ class Tracker:
         if self.det_infos['is_first_frame']: self.reset()
 
         # step1. predict all valid trajectories
-        self.valid_tras = self.merge_valid_tras()
-        self.tras_prediction()
+        self.tras_predict()
 
         # step2. if there is no dets, we will punish all valid trajectories
         if self.det_infos['no_dets']:
@@ -71,7 +71,7 @@ class Tracker:
         # step4. use observations(detection) to update the corresponding trajectories
         # and output unmatch trajectories(up to punish_num) states, and output new trajectories states
         dict_track_res = self.tras_update(tracking_ids, data_info)
-        if len(dict_track_res) == 0: return 
+        if len(dict_track_res['np_track_res']) == 0: return 
             
         # step5. update and output tracking results
         data_info.update({
@@ -83,7 +83,7 @@ class Tracker:
         # whether to use post-predict to reduce FP prediction
         if self.post_nms_cfg['post_nms']: self.post_nms_tras(data_info)
 
-    def tras_prediction(self) -> None:
+    def tras_predict(self) -> None:
         """
         State Prediction for all trajectories
         get self.tra_infos: {
@@ -91,39 +91,22 @@ class Tracker:
             'np_tras_bottom_corners': np.array[nusc_box], [valid_tra_num,]
             'all_valid_ids': np.array, [valid_tra_num,]
             'all_valid_boxes': np.array[nusc_box], [valid_tra_num,]
-            'miss_nums': np.array(miss_nums),  [valid_tra_num,] # corner case, no det at current frame
             'tra_num': len(all_valid_ids)
         }
         """
         # debug, Check for tracklets with duplicate states
         if self.is_debug: self.debug()
-        pred_infos, pred_bms, pred_boxes, all_valid_ids, miss_nums = [], [], [], [], []
+        pred_infos, pred_bms, pred_boxes, all_valid_ids = [], [], [], []
 
-        # corner case, no valid tracklets
+        # corner case(such as first frame..), no valid tracklets
         if len(self.valid_tras) == 0: return
 
-        # switch and predict
+        # predict tracklet for data association
         for tra_id, tra in self.valid_tras.items():
-            state_switch = tra.life_management.state_switch
-            # switch tra info if the tra state is changed after updating at prev frame
-            if state_switch and tra.state == 'dead':
-                # active/tentative -> dead
-                if tra_id in self.active_tras:
-                    self.dead_tras[tra_id] = self.active_tras.pop(tra_id)
-                elif tra_id in self.tentative_tras:
-                    self.dead_tras[tra_id] = self.tentative_tras.pop(tra_id)
-                else:
-                    raise Exception("debug info: tra must have tentative or active state")
-            elif state_switch and tra.state == 'active':
-                # tentative -> active
-                self.active_tras[tra_id] = self.tentative_tras.pop(tra_id)
-            else: pass  # still activate/tentative
+            # only for debug
+            if self.is_debug: assert tra_id not in self.dead_tras
 
-            if self.is_debug: 
-                self.debug()
-                assert tra_id not in self.dead_tras
-
-            # predict each valid tra state
+            # predict each valid tracklet state
             tra.state_predict(timestamp=self.frame_id)
             pred_object = tra[self.frame_id]
             
@@ -131,22 +114,23 @@ class Tracker:
             pred_boxes.append(pred_object.pred_box)
             pred_infos.append(pred_object.pred_infos)
             pred_bms.append(pred_object.pred_box.bottom_corners_)
-            miss_nums.append(tra.life_management.miss_num)
-
-        self.valid_tras = self.merge_valid_tras()
-        if self.is_debug: assert len(all_valid_ids) == len(self.valid_tras)
+            
+        # only for debug
+        if self.is_debug:
+            self.valid_tras = self.merge_valid_tras()
+            assert len(all_valid_ids) == len(self.valid_tras)
         self.tra_infos = {
             'np_tras': np.array(pred_infos),  # info dim: 17, add 'tracking_id', 'seq_id', 'frame_id'
             'np_tras_bottom_corners': np.array(pred_bms),
             'all_valid_ids': np.array(all_valid_ids),
             'all_valid_boxes': np.array(pred_boxes),
-            'miss_nums': np.array(miss_nums),  # when there is no det at current frame, use miss_num to punish tracklet
             'tra_num': len(all_valid_ids)
         }
 
     def tras_punish(self, data_info: dict) -> None:
         """
         handle the corner case where there is no detection at current frame
+        also can be seen as "short-cut"
         :param data_info: dict, output file
         :return: update pure predict state, up to output punish_num frame
         update data_info: {
@@ -160,17 +144,17 @@ class Tracker:
             return
         
         # manage trajectory
-        for tra in self.valid_tras: tra.state_update(timestamp=self.frame_id)
-
-        # Generally, punish num < max_age
-        # in some extreme case (punish num = max_age), dead tras infos are 
-        # also output to the result file. However, Considering the balance of   
-        # speed and accuracy, we think following way is also reasonable
-        punish_tra_idx = np.where(self.tra_infos['miss_nums'] <= self.punish_num)
-        data_info.update(
-            {'np_track_res': self.tra_infos['np_tras'][punish_tra_idx],
-             'box_track_res': self.tra_infos['all_valid_boxes'][punish_tra_idx],
-             'bm_track_res': self.tra_infos['np_tras_bottom_corners'][punish_tra_idx],})
+        dict_track_res = self.tras_update(tracking_ids=np.array([]), data_info=data_info)
+        if len(dict_track_res['np_track_res']) == 0: 
+            data_info.update({'no_val_track_result': True})
+            return 
+            
+        # output punishment tracking results
+        data_info.update({
+            'np_track_res': dict_track_res['np_track_res'],
+            'box_track_res': dict_track_res['box_track_res'],
+            'bm_track_res': dict_track_res['bottom_corners_track_res'],
+        })
 
 
     def tras_update(self, tracking_ids: np.array, data_info: dict) -> dict:
@@ -186,17 +170,19 @@ class Tracker:
             'bm_track_res': np.array, [valid_tra_num, 4, 2]
             }
         """
-        assert len(tracking_ids) == self.det_infos['det_num'] and self.det_infos['det_num'] != 0 and len(self.valid_tras) != 0
+        tracking_ids = tracking_ids.tolist()
+        assert len(tracking_ids) == self.det_infos['det_num'] and len(self.valid_tras) != 0
         np_res, box_res, bm_res = [], [], []
         new_tras, ten_tras, act_tras = {}, {}, {}
         
-        # iterative detections, use measurement(dets) to correct tracklet's
+        # iterative detections, use measurement(dets) to correct tracklet
         for det_idx, tra_id in enumerate(tracking_ids):
             dict_det = {
                 'nusc_box': data_info['box_dets'][det_idx],
                 'np_array': data_info['np_dets'][det_idx],
                 'has_velo': data_info['has_velo']
             }
+            if self.is_debug: assert tra_id not in self.dead_tras
             if tra_id in self.valid_tras:
                 # update exist trajectory
                 tra = self.valid_tras[tra_id]
@@ -205,31 +191,52 @@ class Tracker:
                 # init new trajectory
                 tra = Trajectory(timestamp=self.frame_id,
                                  config=self.cfg,
+                                 track_id=tra_id,
                                  det_infos=dict_det)
                 new_tras[tra_id] = tra
         
         # merge all tras, include exist trajectories and newly generated trajectory
         tmp_merge_tras = {**self.valid_tras, **new_tras}
         
-        # iterative trajectories, punish
+        # iterative trajectories, punish and output
         for tra_id, tra in tmp_merge_tras.items():
-            if 
+            # update unmatched tracklets
+            if tra_id not in tracking_ids: 
+                tra.state_update(timestamp=self.frame_id, det=None)
+            update_object = tra[self.frame_id]
+            # only active tracklets' state are output to the result file
+            if tra.life_management.state == 'active':
+                act_tras[tra_id] = tra
+                if update_object.update_infos is not None:
+                    np_res.append(update_object.update_infos)
+                    box_res.append(update_object.update_box)
+                    bm_res.append(update_object.update_box.bottom_corners_)
+                elif tra.life_management.time_since_update <= self.punish_num:
+                    np_res.append(update_object.predict_infos)
+                    box_res.append(update_object.predict_box)
+                    bm_res.append(update_object.predict_box.bottom_corners_)
+            elif tra.life_management.state == 'tentative':
+                ten_tras[tra_id] = tra
+            elif tra.life_managemnet.state == 'dead':
+                assert tra_id not in self.dead_tras
+                self.dead_tras[tra_id] = tra
+            else: raise Exception('Tracjectory state only have three attributes')
             
+        # reorganize active/dead/tentative trajectories
+        self.active_tras, self.tentative_tras = act_tras, ten_tras
+        self.valid_tras = {**self.active_tras, **self.tentative_tras}
         
-            
-                
-
-                
-                
-                
-            
+        dict_track_res = {
+            'np_track_res': np_res,
+            'box_track_res': box_res,
+            'bm_track_res': bm_res,
+        }
         
-        
+        return dict_track_res   
 
     def data_association(self) -> np.array:
         """
         Associate the track and the detection, and assign a tracking id to each detection
-        
         :return: np.array, tracking ids of each detection
         """
         # corner case, no valid trajectory. quickly assign each det tracking id
@@ -276,7 +283,7 @@ class Tracker:
         first_cost[np.where(~valid_mask)] = -np.inf
 
         # Due to the execution speed of python,
-        # construct the two-stage cost matrix using half-parallel framework is very tricky, 
+        # construct the two-stage cost matrix under half-parallel framework is very tricky, 
         # we strongly recommend only use giou_bev as two-stage metric to build the cost matrix
         return {'one_stage': 1 - first_cost, 'two_stage': 1 - two_cost if two_cost is not None else None}
 

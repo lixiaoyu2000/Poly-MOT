@@ -12,15 +12,15 @@ from motion_module import LinearKalmanFilter, ExtendKalmanFilter
 
 
 class Trajectory:
-    def __init__(self, timestamp: int, config: dict, det_infos: dict):
-        self.cfg = config
-        self.class_label = det_infos['nusc_box'][-1]
+    def __init__(self, timestamp: int, config: dict, track_id: int, det_infos: dict):
+        # init basic infos
+        self.cfg, self.tracking_id, self.class_label = config, track_id, det_infos['nusc_box'][-1]
         # manage tracklet's attribute
         self.life_management = LifeManagement(timestamp, config, self.class_label)
         # manage for tracklet's motion/geometric/score infos
         KF_type = self.cfg['motion_model']['filter']
         assert KF_type in ['LinearKalmanFilter', 'ExtendKalmanFilter'], "must use specific kalman filter"
-        self.tracklet = globals()[KF_type](timestamp, config, det_infos)
+        self.tracklet = globals()[KF_type](timestamp, config, track_id, det_infos)
     
     def state_predict(self, timestamp: int) -> None:
         """
