@@ -25,13 +25,15 @@ class nusc_box(Box):
         :param name: Box name, optional. Can be used e.g. for denote category name.
         :param token: Unique string identifier from DB.
         """
-        orientation = self.abs_orientation_axisZ(Quaternion(rotation))
-        super().__init__(center, size, orientation, label, score, velocity, name, token)
+        super().__init__(center, size, self.abs_orientation_axisZ(Quaternion(rotation)), 
+                         label, score, velocity, name, token)
         assert self.orientation.axis[-1] >= 0
+        
+        self.tracking_id = None
+        self.yaw = self.orientation.radians
+        self.name_label = CLASS_SEG_TO_STR_CLASS[name]
         self.bottom_corners_ = self.bottom_corners()[:2].T  # [4, 2]
         self.volume, self.area = self.box_volum(), self.box_bottom_area()
-        self.name_label = CLASS_SEG_TO_STR_CLASS[name]
-        self.tracking_id = None
 
     @staticmethod
     def abs_orientation_axisZ(orientation: Quaternion) -> Quaternion:

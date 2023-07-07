@@ -208,11 +208,11 @@ class Tracker:
                 if update_object.update_infos is not None:
                     np_res.append(update_object.update_infos)
                     box_res.append(update_object.update_box)
-                    bm_res.append(update_object.update_box.bottom_corners_)
+                    bm_res.append(update_object.update_bms)
                 elif tra.life_management.time_since_update <= self.punish_num:
                     np_res.append(update_object.predict_infos)
                     box_res.append(update_object.predict_box)
-                    bm_res.append(update_object.predict_box.bottom_corners_)
+                    bm_res.append(update_object.predict_bms)
             elif tra.life_management.state == 'tentative':
                 ten_tras[tra_id] = tra
             elif tra.life_managemnet.state == 'dead':

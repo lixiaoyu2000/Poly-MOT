@@ -8,19 +8,21 @@ Ref: https://en.wikipedia.org/wiki/Kalman_filter
 import numpy as np
 from nusc_object import FrameObject
 from geometry.nusc_box import nusc_box
-from pre_processing import arraydet2box
 from motion_model import CA, CTRA, BICYCLE
+from pre_processing import arraydet2box, concat_box_attr
 
 class KalmanFilter:
+    """kalman filter interface
+    """
     def __init__(self, timestamp: int, config: dict, track_id: int, det_infos: dict) -> None:
         # init basic infos, no control input
         self.seq_id = det_infos['seq_id']
         self.initstamp = self.timestamp = timestamp
         self.model = config['motion_model']['model'][self.class_label]
-        self.tracking_id, self.class_label = track_id, det_infos['nusc_box'][-1]
+        self.tracking_id, self.class_label = track_id, det_infos['np_array'][-1]
         self.dt, self.has_velo = config['basic']['LiDAR_interval'], config['basic']['has_velo']
         # init FrameObject for each frame
-        self.frame_objects = {}
+        self.state, self.frame_objects = None, {}
     
     def initialize(self, timestamp: int, det: dict) -> None:
         """initialize the filter parameters
@@ -51,7 +53,7 @@ class KalmanFilter:
         """
         pass
     
-    def addFrameObject(self, timestamp: int, tra_info: np.array, mode: str = None) -> None:
+    def addFrameObject(self, timestamp: int, tra_info: dict, mode: str = None) -> None:
         """add predict/update tracklet state to the frameobjects, data 
         format is also implemented in this function.
         frame_objects: {
@@ -59,24 +61,33 @@ class KalmanFilter:
         }
         Args:
             timestamp (int): current frame id
-            tra_info (np.array): Trajectory state estimated by Kalman filter, 
-                                 which are organized as following:
-            [x, y, z, w, l, h, vx, vy, ry(orientation, 1x4), det_score, class_label]
-            mode (str, optional): stage of adding objects, 'update', 'predict'. Defaults to None.
+            tra_info (dict): Trajectory state estimated by Kalman filter, 
+            {
+                'exter_state': np.array, for output file. 
+                               [x, y, z, w, l, h, vx, vy, ry(orientation, 1x4), det_score, class_label]
+                'inner_state': np.array, for state estimation. 
+                               varies by motion model
+            }
+            mode (str, optional): stage of adding objects, 'update', 'predict', 'init'. Defaults to None.
         """
-        if mode is None:
-            return
+        # corner case, no tra info
+        if mode is None: return
         
-        box_info, bm_info = arraydet2box(tra_info)
-        frame_object = FrameObject()
+        # data format conversion
+        inner_info, exter_info = tra_info['inner_state'], tra_info['exter_state']
+        extra_info = [self.tracking_id, self.seq_id, timestamp]
+        box_info, bm_info = arraydet2box(exter_info)
+
+        # update each frame infos 
         if mode == 'update':
-            frame_object.update_infos = np.array(tra_info, [self.tracking_id, self.seq_id, timestamp])
-            frame_object.update_box = box_info
-            frame_object.update_bms = bm_info
+            frame_object = self.frame_objects[timestamp]
+            frame_object.update_bms, frame_object.update_box = bm_info, box_info
+            frame_object.update_state, frame_object.update_infos = inner_info, np.array(exter_info, extra_info)
         elif mode == 'predict':
-            frame_object.predict_infos = np.array(tra_info, [self.tracking_id, self.seq_id, timestamp])
-            frame_object.predict_box = box_info
-            frame_object.predict_bms = bm_info
+            frame_object = FrameObject()
+            frame_object.predict_bms, frame_object.predict_box = bm_info, box_info
+            frame_object.predict_state, frame_object.predict_infos = inner_info, np.array(exter_info, extra_info)
+            self.frame_objects[timestamp] = frame_object
         else: raise Exception('mode must be update or predict')
             
     def __getitem__(self, item) -> FrameObject:
@@ -88,11 +99,14 @@ class KalmanFilter:
 
 
 class LinearKalmanFilter(KalmanFilter):
+    """Linear Kalman Filter for linear motion model, such as CV and CA
+    """
     def __init__(self, timestamp: int, config: dict, track_id: int, det_infos: dict) -> None:
         # init basic infos
         super(LinearKalmanFilter, self).__init__(timestamp, config, track_id, det_infos)
         # set motion model, default Constant Acceleration(CA) for LKF
-        self.model = globals()[self.model](self.has_velo) if self.model in ['CV', 'CA'] else globals()['CA'](self.has_velo)
+        self.model = globals()[self.model](self.has_velo, self.dt) if self.model in ['CV', 'CA'] \
+                     else globals()['CA'](self.has_velo, self.dt)
         # Transition and Observation Matrices are fixed in the LKF
         self.initialize(det_infos)
         
@@ -107,7 +121,39 @@ class LinearKalmanFilter(KalmanFilter):
         self.H = self.model.getMeaStateH()
 
         # get different data format tracklet's state
-        self.addFrameObject(self.timestamp, det_infos)
+        self.state = self.model.setInitState(det_infos)
+        tra_infos = {
+            'inner_state': self.state,
+            'exter_state': det_infos['np_array']
+        }
+        self.addFrameObject(self.timestamp, tra_infos, 'predict')
+        self.addFrameObject(self.timestamp, tra_infos, 'update')
+    
+    def predict(self, timestamp: int) -> None:
+        # predict state and errorcov
+        self.state *= self.F
+        self.P = self.F * self.P * self.F.T + self.Q
+        
+        # add to dict
+        output_info = self.model.getOutputInfo()
+        tra_infos = {
+            'inner_state': self.state,
+            'exter_state': output_info
+        }
+        self.addFrameObject(self, timestamp, tra_infos, 'predict')
+        
+    def update(self, timestamp: int, det: dict = None) -> None:
+        # corner case, no det for updating
+        if det is None: return
+        
+        # update state and errorcov
+        det_info = 
+        
+        
+        
+        
+        
+        
         
         
     
