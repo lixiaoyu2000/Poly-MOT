@@ -18,14 +18,14 @@ from scipy.spatial import ConvexHull
 from utils import expand_dims
 from pre_processing.nusc_data_conversion import concat_box_attr
 from geometry import PolyArea2D_s, PolyArea2D, yaw_punish_factor, \
-    mask_between_boxes, logical_or_mask, loop_convex, loop_inter, nusc_box
+    mask_between_boxes, logical_or_mask, loop_convex, loop_inter, NuscBox
 
 
-def iou_bev_s(box_a: nusc_box, box_b: nusc_box) -> float:
+def iou_bev_s(box_a: NuscBox, box_b: NuscBox) -> float:
     """
     Serial implementation of iou bev
-    :param box_a: nusc_box
-    :param box_b: nusc_box
+    :param box_a: NuscBox
+    :param box_b: NuscBox
     :return: float, iou between two boxes under Bird's Eye View(BEV)
     """
     if box_b.name != box_a.name:
@@ -37,11 +37,11 @@ def iou_bev_s(box_a: nusc_box, box_b: nusc_box) -> float:
     return ioubev
 
 
-def iou_3d_s(box_a: nusc_box, box_b: nusc_box) -> Tuple[float, float]:
+def iou_3d_s(box_a: NuscBox, box_b: NuscBox) -> Tuple[float, float]:
     """
     Serial implementation of 3d iou
-    :param box_a: nusc_box
-    :param box_b: nusc_box
+    :param box_a: NuscBox
+    :param box_b: NuscBox
     :return: [float, float], 3d/bev iou between two boxes
     """
     if box_b.name != box_a.name:
@@ -57,11 +57,11 @@ def iou_3d_s(box_a: nusc_box, box_b: nusc_box) -> Tuple[float, float]:
     return ioubev, iou3d
 
 
-def giou_bev_s(box_a: nusc_box, box_b: nusc_box) -> float:
+def giou_bev_s(box_a: NuscBox, box_b: NuscBox) -> float:
     """
     Serial implementation of giou(Generalized Intersection over Union) under Bird's Eye View(BEV)
-    :param box_a: nusc_box
-    :param box_b: nusc_box
+    :param box_a: NuscBox
+    :param box_b: NuscBox
     :return: float, giou between two boxes under Bird's Eye View(BEV)
     """
     if box_b.name != box_a.name:
@@ -84,11 +84,11 @@ def giou_bev_s(box_a: nusc_box, box_b: nusc_box) -> float:
     return gioubev
 
 
-def giou_3d_s(box_a: nusc_box, box_b: nusc_box) -> Tuple[float, float]:
+def giou_3d_s(box_a: NuscBox, box_b: NuscBox) -> Tuple[float, float]:
     """
     Serial implementation of 3d giou
-    :param box_a: nusc_box
-    :param box_b: nusc_box
+    :param box_a: NuscBox
+    :param box_b: NuscBox
     :return: 3d giou between two boxes
     """
     if box_b.name != box_a.name:
@@ -118,12 +118,12 @@ def giou_3d_s(box_a: nusc_box, box_b: nusc_box) -> Tuple[float, float]:
     return gioubev, giou3d
 
 
-def d_eucl_s(box_a: nusc_box, box_b: nusc_box) -> float:
+def d_eucl_s(box_a: NuscBox, box_b: NuscBox) -> float:
     """
     Serial implementation of Euclidean Distance with yaw angle punish
-    :param box_a: nusc_box
-    :param box_b: nusc_box
-    :return: Eucl distance between two nusc_box
+    :param box_a: NuscBox
+    :param box_b: NuscBox
+    :return: Eucl distance between two NuscBox
     """
     if box_b.name != box_a.name:
         return np.inf
@@ -136,8 +136,8 @@ def d_eucl_s(box_a: nusc_box, box_b: nusc_box) -> float:
 def d_eucl(boxes_a, boxes_b) -> np.array:
     """
     Serial implementation of Euclidean Distance with yaw angle punish
-    :param boxes_a: np.array[nusc_box], a collection of nusc_box
-    :param boxes_b: np.array[nusc_box], a collection of nusc_box
+    :param boxes_a: np.array[NuscBox], a collection of NuscBox
+    :param boxes_b: np.array[NuscBox], a collection of NuscBox
     :return: Eucl distance between two collections
     """
     eucl_dis = np.zeros((len(boxes_a), len(boxes_b)))
@@ -152,8 +152,8 @@ def giou_3d(boxes_a: dict, boxes_b: dict) -> Tuple[np.array, np.array]:
     half-parallel implementation of 3d giou. why half? convexhull and intersection are still serial
     'np_dets': np.array, [det_num, 14](x, y, z, w, l, h, vx, vy, ry(orientation, 1x4), det_score, class_label)
     'np_dets_bottom_corners': np.array, [det_num, 4, 2]
-    :param boxes_a: dict, a collection of nusc_box info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
-    :param boxes_b: dict, a collection of nusc_box info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
+    :param boxes_a: dict, a collection of NuscBox info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
+    :param boxes_b: dict, a collection of NuscBox info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
     :return: [np.array, np.array], 3d giou/bev giou between two boxes collections
     """
     assert 'np_dets' in boxes_a and 'np_dets_bottom_corners' in boxes_a, 'must contain specified keys'
@@ -208,8 +208,8 @@ def giou_bev(boxes_a: dict, boxes_b: dict) -> np.array:
     half-parallel implementation of bev giou.
     'np_dets': np.array, [det_num, 14](x, y, z, w, l, h, vx, vy, ry(orientation, 1x4), det_score, class_label)
     'np_dets_bottom_corners': np.array, [det_num, 4, 2]
-    :param boxes_a: dict, a collection of nusc_box info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
-    :param boxes_b: dict, a collection of nusc_box info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
+    :param boxes_a: dict, a collection of NuscBox info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
+    :param boxes_b: dict, a collection of NuscBox info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
     :return: np.array, bev giou between two boxes collections
     """
     assert 'np_dets' in boxes_a and 'np_dets_bottom_corners' in boxes_a, 'must contain specified keys'
@@ -255,8 +255,8 @@ def iou_bev(boxes_a: dict, boxes_b: dict) -> np.array:
     half-parallel implementation of bev iou.
     'np_dets': np.array, [det_num, 14](x, y, z, w, l, h, vx, vy, ry(orientation, 1x4), det_score, class_label)
     'np_dets_bottom_corners': np.array, [det_num, 4, 2]
-    :param boxes_a: dict, a collection of nusc_box info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
-    :param boxes_b: dict, a collection of nusc_box info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
+    :param boxes_a: dict, a collection of NuscBox info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
+    :param boxes_b: dict, a collection of NuscBox info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
     :return: np.array, bev iou between two boxes collections
     """
     assert 'np_dets' in boxes_a and 'np_dets_bottom_corners' in boxes_a, 'must contain specified keys'
@@ -298,8 +298,8 @@ def iou_3d(boxes_a: dict, boxes_b: dict) -> Tuple[np.array, np.array]:
     half-parallel implementation of 3d iou.
     'np_dets': np.array, [det_num, 14](x, y, z, w, l, h, vx, vy, ry(orientation, 1x4), det_score, class_label)
     'np_dets_bottom_corners': np.array, [det_num, 4, 2]
-    :param boxes_a: dict, a collection of nusc_box info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
-    :param boxes_b: dict, a collection of nusc_box info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
+    :param boxes_a: dict, a collection of NuscBox info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
+    :param boxes_b: dict, a collection of NuscBox info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
     :return: [np.array, np.array], 3d iou/bev iou between two boxes collections
     """
     assert 'np_dets' in boxes_a and 'np_dets_bottom_corners' in boxes_a, 'must contain specified keys'

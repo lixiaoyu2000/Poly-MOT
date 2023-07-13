@@ -13,7 +13,7 @@ from motion_module import LinearKalmanFilter, ExtendKalmanFilter
 class Trajectory:
     def __init__(self, timestamp: int, config: dict, track_id: int, det_infos: dict):
         # init basic infos
-        self.cfg, self.tracking_id, self.class_label = config, track_id, det_infos['nusc_box'][-1]
+        self.cfg, self.tracking_id, self.class_label = config, track_id, det_infos['NuscBox'][-1]
         # manage tracklet's attribute
         self.life_management = LifeManagement(timestamp, config, self.class_label)
         # manage for tracklet's motion/geometric/score infos
@@ -35,7 +35,7 @@ class Trajectory:
         :param timestamp: current frame id
         :param det: dict, detection infos under different data format
             {
-                'nusc_box': nusc_box,
+                'NuscBox': NuscBox,
                 'np_array': np.array,
                 'has_velo': bool, whether the detetor has velocity info
             }

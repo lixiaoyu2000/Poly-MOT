@@ -6,8 +6,8 @@ Obtain the observation information(detection) of each frame iteratively
 
 import pdb
 import numpy as np
+from geometry import NuscBox
 from utils.io import load_file
-from geometry.nusc_box import nusc_box
 from data.script.NUSC_CONSTANT import *
 from pre_processing import dictdet2array, arraydet2box, blend_nms
 
@@ -39,7 +39,7 @@ class NuScenesloader:
             'has_velo': bool
             'np_dets': np.array, [det_num, 14](x, y, z, w, l, h, vx, vy, ry(orientation, 1x4), det_score, class_label)
             'np_dets_bottom_corners': np.array, [det_num, 4, 2]
-            'box_dets': np.array[nusc_box], [det_num]
+            'box_dets': np.array[NuscBox], [det_num]
             'no_dets': bool, corner case,
             'det_num': int,
         }

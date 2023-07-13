@@ -6,8 +6,8 @@ Linear Kalman Filter for CA, CV Model, Extend Kalman Filter for CTRA, CTRV, Bicy
 Ref: https://en.wikipedia.org/wiki/Kalman_filter
 """
 import numpy as np
+from geometry import NuscBox
 from nusc_object import FrameObject
-from geometry.nusc_box import nusc_box
 from motion_model import CA, CTRA, BICYCLE
 from pre_processing import arraydet2box, concat_box_attr
 
@@ -30,7 +30,7 @@ class KalmanFilter:
             timestamp (int): current frame id
             det (dict): detection infos under different data format.
             {
-                'nusc_box': nusc_box,
+                'nusc_box': NuscBox,
                 'np_array': np.array,
                 'has_velo': bool, whether the detetor has velocity info
             }
@@ -53,6 +53,27 @@ class KalmanFilter:
         """
         pass
     
+    def getMeasureInfo(self, det: dict = None) -> np.array:
+        """convert det box to the measurement info for updating filter
+        [x, y, z, w, h, l, (vx, vy, optional), ry]
+        Args:
+            det (dict, optional): same as self.init. Defaults to None.
+
+        Returns:
+            np.array: measurement for updating filter
+        """
+        if det is None: raise("detection cannot be None")
+        
+        mea_attr = ('translation', 'size', 'velocity', 'yaw') if self.has_velo else ('translation', 'size', 'yaw')
+        list_det = concat_box_attr(det['nusc_box'], *mea_attr)
+        
+        # only for debug, delete on the release version
+        # ensure the measure yaw goes around [0, 0, 1]
+        assert list_det[-1] == det['nusc_box'].orientation.radians and det['nusc_box'].orientation.axis[-1] >= 0
+        
+        return np.mat(list_det).T
+        
+    
     def addFrameObject(self, timestamp: int, tra_info: dict, mode: str = None) -> None:
         """add predict/update tracklet state to the frameobjects, data 
         format is also implemented in this function.
@@ -68,7 +89,7 @@ class KalmanFilter:
                 'inner_state': np.array, for state estimation. 
                                varies by motion model
             }
-            mode (str, optional): stage of adding objects, 'update', 'predict', 'init'. Defaults to None.
+            mode (str, optional): stage of adding objects, 'update', 'predict'. Defaults to None.
         """
         # corner case, no tra info
         if mode is None: return
@@ -112,16 +133,17 @@ class LinearKalmanFilter(KalmanFilter):
         
     def initialize(self, det_infos: dict) -> None:
         # state transition
-        self.P = self.model.getInitCovP()
         self.F = self.model.getTransitionF()
         self.Q = self.model.getProcessNoiseQ()
+        self.SD = self.model.getStateDim()
+        self.P = self.model.getInitCovP(self.class_label)
         
         # state to measurement transition
         self.R = self.model.getMeaNoiseR()
         self.H = self.model.getMeaStateH()
 
         # get different data format tracklet's state
-        self.state = self.model.setInitState(det_infos)
+        self.state = self.model.getInitState(det_infos)
         tra_infos = {
             'inner_state': self.state,
             'exter_state': det_infos['np_array']
@@ -131,11 +153,11 @@ class LinearKalmanFilter(KalmanFilter):
     
     def predict(self, timestamp: int) -> None:
         # predict state and errorcov
-        self.state *= self.F
+        self.state = self.F * self.state
         self.P = self.F * self.P * self.F.T + self.Q
         
-        # add to dict
-        output_info = self.model.getOutputInfo()
+        # convert the state in filter to the output format
+        output_info = self.model.getOutputInfo(self.state)
         tra_infos = {
             'inner_state': self.state,
             'exter_state': output_info
@@ -147,7 +169,21 @@ class LinearKalmanFilter(KalmanFilter):
         if det is None: return
         
         # update state and errorcov
-        det_info = 
+        meas_info = self.getMeasureInfo(det)
+        _res = meas_info - self.H * self.state
+        self.model.warpYawToPi(_res)
+        _S = self.H * self.P * self.H.T + self.R
+        _KF_GAIN = self.P * self.H.T * _S.I
+        self.state = self.state + _KF_GAIN * _res
+        self.P = (np.mat(np.identity(self.SD)) - _KF_GAIN * self.H) * self.P
+        
+        # output updated state to the result file
+        output_info = self.model.getOutputInfo(self.state)
+        tra_infos = {
+            'inner_state': self.state,
+            'exter_state': output_info
+        }
+        self.addFrameObject(self, timestamp, tra_infos, 'update')
         
         
         

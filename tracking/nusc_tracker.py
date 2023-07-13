@@ -45,7 +45,7 @@ class Tracker:
         :param data_info: the observation information(detection) of each frame
         :return: update data_info: {
             'np_track_res': np.array, [num, 17] add 'tracking_id', 'seq_id', 'frame_id'
-            'box_track_res': np.array[nusc_box], [num,]
+            'box_track_res': np.array[NuscBox], [num,]
             'no_val_track_result'[optimal]: bool
         }
         """
@@ -86,9 +86,9 @@ class Tracker:
         State Prediction for all trajectories
         get self.tra_infos: {
             'np_tras': np.array, [valid_tra_num, 14]
-            'np_tras_bottom_corners': np.array[nusc_box], [valid_tra_num,]
+            'np_tras_bottom_corners': np.array[NuscBox], [valid_tra_num,]
             'all_valid_ids': np.array, [valid_tra_num,]
-            'all_valid_boxes': np.array[nusc_box], [valid_tra_num,]
+            'all_valid_boxes': np.array[NuscBox], [valid_tra_num,]
             'tra_num': len(all_valid_ids)
         }
         """
@@ -133,7 +133,7 @@ class Tracker:
         :return: update pure predict state, up to output punish_num frame
         update data_info: {
             'np_track_res': np.array, [num, 17] add 'tracking_id', 'seq_id', 'frame_id'
-            'box_track_res': np.array[nusc_box], [num,]
+            'box_track_res': np.array[NuscBox], [num,]
         }
         """
         # no valid tras after predicting(valid ids is empty) or no valid tras at prev frame(None)
@@ -164,7 +164,7 @@ class Tracker:
         :return: dict, valid estimated states(updated tras, new tras, valid unmatched tras)
             {
             'np_track_res': np.array, [valid_tra_num, 17],
-            'box_track_res': np.array[nusc_box], [valid_tra_num,]
+            'box_track_res': np.array[NuscBox], [valid_tra_num,]
             'bm_track_res': np.array, [valid_tra_num, 4, 2]
             }
         """

@@ -4,7 +4,7 @@ utils for geometry calculations on the NuScenes dataset
 import pdb
 import numba as nb
 import numpy as np
-from geometry.nusc_box import nusc_box
+from geometry import NuscBox
 from scipy.spatial import ConvexHull
 from shapely.geometry import Polygon
 from typing import List, Tuple, Union
@@ -48,10 +48,10 @@ def get_yaw_diff_in_radians(rad1: float, rad2: float) -> float:
     return abs(angle_diff)
 
 
-def yaw_punish_factor(box_a: nusc_box, box_b: nusc_box) -> float:
+def yaw_punish_factor(box_a: NuscBox, box_b: NuscBox) -> float:
     """
-    :param box_a: nusc_box
-    :param box_b: nusc_box
+    :param box_a: NuscBox
+    :param box_b: NuscBox
     :return: float, penalty factor due to difference in yaw between two boxes, value interval -> [1, 3]
     """
     boxa_radians = box_a.abs_orientation_axisZ(box_a.orientation).radians

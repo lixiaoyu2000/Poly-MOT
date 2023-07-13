@@ -10,7 +10,7 @@ from data.script.NUSC_CONSTANT import *
 from nuscenes.utils.data_classes import Box
 
 
-class nusc_box(Box):
+class NuscBox(Box):
     def __init__(self, center: List[float], size: List[float], rotation: List[float], label: int = np.nan,
                  score: float = np.nan, velocity: Tuple = (np.nan, np.nan, np.nan), name: str = None,
                  token: str = None):

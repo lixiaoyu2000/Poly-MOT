@@ -10,7 +10,6 @@ class FrameObject:
         
         # infos for state transition
         self.update_state, self.predict_state = None, None
-        self.update_cov, self.predict_cov = None, None
         
     def __repr__(self) -> str:
         repr_str = 'Predict state: {}, Update state: {}'

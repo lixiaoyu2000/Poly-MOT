@@ -4,13 +4,13 @@ data format conversion and data concat on the NuScenes dataset
 
 import pdb
 import numpy as np
-from geometry.nusc_box import nusc_box
+from geometry import NuscBox
 from pyquaternion import Quaternion
 from typing import List, Tuple, Union
 from data.script.NUSC_CONSTANT import *
 
 
-def concat_box_attr(nuscbox: nusc_box, *attrs) -> List:
+def concat_box_attr(nuscbox: NuscBox, *attrs) -> List:
     res = []
     for attr in attrs:
         res += getattr(nuscbox, attr)
@@ -35,15 +35,15 @@ def dictdet2array(dets: List[dict], *attrs) -> Union[List, np.array]:
     return listdets, np.array(listdets)
 
 
-def arraydet2box(dets: np.array) -> Union[np.array[nusc_box], np.array]:
+def arraydet2box(dets: np.array) -> Union[np.array[NuscBox], np.array]:
     # det -> (x, y, z, w, l, h, vx, vy, ry(orientation, 1x4), det_score, class_label)
     if dets.ndim == 1: dets = dets[None, :]
     assert dets.shape[1] == 14, "The number of observed states must satisfy 14"
-    nusc_boxes, boxes_bottom_corners = [], []
+    NuscBoxes, boxes_bottom_corners = [], []
     for idx, det in enumerate(dets):
-        curr_box = nusc_box(center=det[0:3], size=det[3:6], rotation=det[8:12],
+        curr_box = NuscBox(center=det[0:3], size=det[3:6], rotation=det[8:12],
                             velocity=tuple(det[6:8].tolist() + [0.0]), score=det[12],
                             name=CLASS_STR_TO_SEG_CLASS[int(det[13])])
-        nusc_boxes.append(curr_box)
+        NuscBoxes.append(curr_box)
         boxes_bottom_corners.append(curr_box.bottom_corners_)
-    return np.array(nusc_boxes), np.array(boxes_bottom_corners)
+    return np.array(NuscBoxes), np.array(boxes_bottom_corners)

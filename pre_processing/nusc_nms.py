@@ -8,7 +8,7 @@ import pdb
 import numpy as np
 import numba as nb
 from typing import List
-from geometry import nusc_box
+from geometry import NuscBox
 from data.script.NUSC_CONSTANT import *
 from geometry.nusc_distance import iou_bev_s, iou_3d_s, giou_bev_s, giou_3d_s, d_eucl_s
 from geometry.nusc_distance import iou_bev, iou_3d, giou_bev, giou_3d, d_eucl
@@ -16,7 +16,7 @@ from geometry.nusc_distance import iou_bev, iou_3d, giou_bev, giou_3d, d_eucl
 
 def blend_nms(box_infos: dict, metrics: str, thre: float) -> List[int]:
     """
-    :param box_infos: dict, a collection of nusc_box info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
+    :param box_infos: dict, a collection of NuscBox info, keys must contain 'np_dets' and 'np_dets_bottom_corners'
     :param metrics: str, similarity metric for nms, five implemented metrics(iou_bev, iou_3d, giou_bev, giou_3d, d_eluc)
     :param thre: float, threshold of filter
     :return: keep box index, List[int]
