@@ -85,7 +85,7 @@ class KalmanFilter:
             tra_info (dict): Trajectory state estimated by Kalman filter, 
             {
                 'exter_state': np.array, for output file. 
-                               [x, y, z, w, l, h, vx, vy, ry(orientation, 1x4), det_score, class_label]
+                               [x, y, z, w, l, h, vx, vy, ry(orientation, 1x4), tra_score, class_label]
                 'inner_state': np.array, for state estimation. 
                                varies by motion model
             }
