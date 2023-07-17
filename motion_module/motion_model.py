@@ -6,6 +6,7 @@ Five implemented motion models, including
 """
 import numpy as np
 from pyquaternion import Quaternion
+from utils.math import warp_to_pi
 from data.script.NUSC_CONSTANT import *
 
 class CA: 
@@ -125,6 +126,7 @@ class CA:
                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
         return H
     
+    @staticmethod
     def getOutputInfo(self, state: np.mat) -> np.array:
         """convert state vector in the filter to the output format
         Note that, tra score will be process later
@@ -132,12 +134,40 @@ class CA:
             state (np.mat): [state dim, 1], predict or update state estimated by the filter
 
         Returns:
-            np.array: [14, 1], predict or update state under output file format
-            output format: [x, y, z, w, l, h, vx, vy, ry(orientation, 1x4), tra_score, class_label]
+            np.array: [12(fix), 1], predict or update state under output file format
+            output format: [x, y, z, w, l, h, vx, vy, ry(orientation, 1x4)]
         """
         rotation = Quaternion(axis=(0, 0, 1), radians=state[-1, 0]).q
-        array_state = 
-        return array_state
+        list_state = state.T.tolist()[0][:8] + rotation.tolist()
+        return np.array(list_state)
+    
+    @staticmethod
+    def warpResYawToPi(self, res: np.mat) -> np.mat:
+        """warp res yaw to [-pi, pi) in place
+
+        Args:
+            res (np.mat): [measure dim, 1]
+            res infos -> [x, y, z, w, l, h, (vx, vy, optional), ry]
+
+        Returns:
+            np.mat: [measure dim, 1], residual warped to [-pi, pi)
+        """
+        res[-1: 0] = warp_to_pi(res[-1: 0])
+        return res
+    
+    @staticmethod
+    def warpStateYawToPi(self, state: np.mat) -> np.mat:
+        """warp state yaw to [-pi, pi) in place
+
+        Args:
+            state (np.mat): [state dim, 1]
+            State vector: [x, y, z, w, l, h, vx, vy, vz, ax, ay, az, ry]
+
+        Returns:
+            np.mat: [state dim, 1], state after warping
+        """
+        state[-1, 0] = warp_to_pi(state[-1: 0])
+        return state
     
     def getStateDim(self) -> int:
         return self.SD

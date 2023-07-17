@@ -5,8 +5,7 @@ data format conversion and data concat on the NuScenes dataset
 import pdb
 import numpy as np
 from geometry import NuscBox
-from pyquaternion import Quaternion
-from typing import List, Tuple, Union
+from typing import List, Union
 from data.script.NUSC_CONSTANT import *
 
 

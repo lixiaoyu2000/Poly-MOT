@@ -15,7 +15,7 @@ association:
   second_metric: 'giou_bev'
   two_stage: True  # Whether to use two-stage data association
   first_thre: {1: 1.5, 0: 1.5, 2: 1.5, 3: 1.5, 4: 1.5, 5: 1.5, 6: 1.5}  # category-specific one-stage thresholds
-  second_thre: 1  # two-stage thresholds
+  second_thre: {1: 1, 0: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1}  # two-stage thresholds
   algorithm : 'Hungarian'  # Greedy, Hungarian, Mutual Nearest Neighbor(MNN)
 
 motion_model:

@@ -4,62 +4,37 @@ Three implemented matching methods(Greedy, Hungarian, Mutual Nearest Neighbor(MN
 TODO: to support more matching methods
 """
 
+import lap
 import numpy as np
-from data.script.NUSC_CONSTANT import *
-from geometry.nusc_utils import mask_between_boxes
+from typing import Tuple
 
 
-def mask_tras_dets(cls_num, det_labels, tra_labels) -> np.array:
-    """
-    mask invalid cost between tras and dets
-    :return: np.array[bool], [cls_num, det_num, tra_num], True denotes valid (det label == tra label == cls idx)
-    """
-    det_num, tra_num = len(det_labels), len(tra_labels)
-    cls_mask = np.ones(shape=(cls_num, det_num, tra_num)) * np.arange(cls_num)[:, None, None]
-    # [det_num, tra_num], True denotes invalid(diff cls)
-    same_mask, _ = mask_between_boxes(det_labels, tra_labels)
-    # [det_num, tra_num], invalid idx assign -1
-    tmp_labels = tra_labels[None, :].repeat(det_num, axis=0)
-    tmp_labels[np.where(same_mask)] = -1
-    return tmp_labels[None, :, :].repeat(cls_num, axis=0) == cls_mask
+def Hungarian(cost_matrix: np.array, threshold: dict) -> Tuple[list, list, np.array, np.array]:
+    """implement hungarian algorithm with lap
 
+    Args:
+        cost_matrix (np.array): 3-ndim or 2-ndim, [N_cls, N_det, N_tra], invaild cost equal to np.inf
+        threshold (dict): matching threshold to restrict FP matches
 
-def fast_compute_check(metrics: dict, second_metric: str) -> bool:
+    Returns:
+        Tuple[list, list, np.array, np.array]: matched det, matched tra, unmatched det, unmatched tra
     """
-    Whether cost matrix can be quickly constructed
-    :param: dict, similarity metric for each class
-    :param: str, similarity metric for second stage
-    :return: bool, True -> fast computation
-    """
-    used_metrics = [m for _, m in metrics.items()] + [second_metric]
-    assert len(used_metrics) != 0, 'must have metrics for association'
-    return True if len(set(used_metrics) - set(FAST_METRIC)) == 0 else False
 
-
-def reorder_metrics(metrics: dict) -> dict:
-    """
-    reorder metrics from {key(class, int): value(metrics, str)} to {key(metrics, str): value(class_labels, list)}
-    :param metrics: dict, format: {key(class, int): value(metrics, str)}
-    :return: dict, {key(metrics, str): value(class_labels, list)}
-    """
-    new_metrics = {}
-    for cls, metric in metrics:
-        if metric in new_metrics: new_metrics[metric].append(cls)
-        else: new_metrics[metric] = []
-    return new_metrics
-
-
-def spec_metric_mask(cls_list: list, det_labels: np.array, tra_labels: np.array) -> np.array:
-    """
-    mask matrix, merge all object instance index of the specific class
-    :param cls_list: list, valid category list
-    :param det_labels: np.array, class labels of detections
-    :param tra_labels: np.array, class labels of trajectories
-    :return: np.array[bool], True denotes invalid(the object's category is not specific)
-    """
-    det_num, tra_num = len(det_labels), len(tra_labels)
-    metric_mask = np.ones((det_num, tra_num), dtype=bool)
-    merge_det_idx = [idx for idx, cls in enumerate(det_labels) if cls in cls_list]
-    merge_tra_idx = [idx for idx, cls in enumerate(tra_labels) if cls in cls_list]
-    metric_mask[np.ix_(merge_det_idx, merge_tra_idx)] = False
-    return metric_mask
+    if cost_matrix.size == 0:
+        return (
+            np.empty((0, 2), dtype=int),
+            tuple(range(cost_matrix.shape[0])),
+            tuple(range(cost_matrix.shape[1])),
+        )
+    matches, unmatched_a, unmatched_b = [], [], []
+    # cost:总代价, x:一个大小为n的数组，用于指定每一行被分配到哪一列, y: 一个大小为n的数组，用于指定每列被分配到哪一行
+    cost, x, y = lap.lapjv(cost_matrix, extend_cost=True, cost_limit=threshold)
+    for ix, mx in enumerate(x):
+        if mx >= 0:
+            matches.append([ix, mx])
+    # 没有匹配的det
+    unmatched_a = np.where(x < 0)[0]
+    # 没有匹配的pre
+    unmatched_b = np.where(y < 0)[0]
+    matches = np.asarray(matches)
+    return matches, unmatched_a, unmatched_b

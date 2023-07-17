@@ -2,7 +2,6 @@
 Tracker, Core of Poly-MOT.
 Tracklet prediction and punishment, cost matrix construction, tracking id assignment, tracklet update and init, and output file
 
-TODO: consider tentative tracklets, Reorganize the output format
 TODO: delete debug log in the release version
 """
 
@@ -10,9 +9,9 @@ import pdb
 import numpy as np
 from nusc_trajectory import Trajectory
 from data.script.NUSC_CONSTANT import *
+from utils.matching import Greedy, Hungarian, MNN
 from geometry.nusc_distance import iou_bev, iou_3d, giou_bev, giou_3d, d_eucl
-from utils.matching import mask_tras_dets, fast_compute_check, reorder_metrics, spec_metric_mask, \
-    linear_assignment
+from utils.script import mask_tras_dets, fast_compute_check, reorder_metrics, spec_metric_mask
 
 
 class Tracker:
@@ -293,12 +292,12 @@ class Tracker:
         """
         cost1, cost2 = cost_matrices['one_stage'], cost_matrices['two_stage']
         # m_tras_1 is not the tracking id, but is the index of tracklet in the all valid trajectories
-        m_dets_1, m_tras_1, um_dets_1, um_tras_1 = linear_assignment(cost1, self.f_thre, self.algorithm)
+        m_dets_1, m_tras_1, um_dets_1, um_tras_1 = globals()[self.algorithm](cost1, self.f_thre)
         if self.two_stage:
             inf_cost = np.ones_like(cost2) * np.inf
             inf_cost[np.ix_(um_dets_1, um_tras_1)] = 0
             cost2 += inf_cost
-            m_dets_2, m_tras_2, _, _ = linear_assignment(cost2, self.s_thre, self.algorithm)
+            m_dets_2, m_tras_2, _, _ = globals()[self.algorithm](cost2, self.s_thre)
             m_dets_1 += m_dets_2
             m_tras_1 += m_tras_2
 

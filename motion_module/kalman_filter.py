@@ -6,7 +6,6 @@ Linear Kalman Filter for CA, CV Model, Extend Kalman Filter for CTRA, CTRV, Bicy
 Ref: https://en.wikipedia.org/wiki/Kalman_filter
 """
 import numpy as np
-from geometry import NuscBox
 from nusc_object import FrameObject
 from motion_model import CA, CTRA, BICYCLE
 from pre_processing import arraydet2box, concat_box_attr
@@ -110,7 +109,22 @@ class KalmanFilter:
             frame_object.predict_state, frame_object.predict_infos = inner_info, np.array(exter_info, extra_info)
             self.frame_objects[timestamp] = frame_object
         else: raise Exception('mode must be update or predict')
-            
+    
+    def getOutputInfo(self, state: np.mat) -> np.array:
+        """convert state vector in the filter to the output format
+        Note that, tra score will be process later
+        Args:
+            state (np.mat): [state dim, 1], predict or update state estimated by the filter
+
+        Returns:
+            np.array: [14(fix), 1], predict or update state under output file format
+            output format: [x, y, z, w, l, h, vx, vy, ry(orientation, 1x4), tra_score, class_label]
+        """
+        
+        # return state vector except tra score and tra class
+        inner_state = self.model.getOutputInfo(state)
+        return np.append(inner_state, np.array([-1, self.class_label]))
+    
     def __getitem__(self, item) -> FrameObject:
         return self.frame_objects[item]
 
@@ -157,7 +171,8 @@ class LinearKalmanFilter(KalmanFilter):
         self.P = self.F * self.P * self.F.T + self.Q
         
         # convert the state in filter to the output format
-        output_info = self.model.getOutputInfo(self.state)
+        self.model.warpStateYawToPi(self.state)
+        output_info = self.getOutputInfo(self.state)
         tra_infos = {
             'inner_state': self.state,
             'exter_state': output_info
@@ -171,14 +186,16 @@ class LinearKalmanFilter(KalmanFilter):
         # update state and errorcov
         meas_info = self.getMeasureInfo(det)
         _res = meas_info - self.H * self.state
-        self.model.warpYawToPi(_res)
+        self.model.warpResYawToPi(_res)
         _S = self.H * self.P * self.H.T + self.R
         _KF_GAIN = self.P * self.H.T * _S.I
+        
         self.state = self.state + _KF_GAIN * _res
         self.P = (np.mat(np.identity(self.SD)) - _KF_GAIN * self.H) * self.P
         
         # output updated state to the result file
-        output_info = self.model.getOutputInfo(self.state)
+        self.model.warpStateYawToPi(self.state)
+        output_info = self.getOutputInfo(self.state)
         tra_infos = {
             'inner_state': self.state,
             'exter_state': output_info
