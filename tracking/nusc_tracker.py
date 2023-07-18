@@ -7,9 +7,9 @@ TODO: delete debug log in the release version
 
 import pdb
 import numpy as np
-from nusc_trajectory import Trajectory
+from .nusc_trajectory import Trajectory
 from data.script.NUSC_CONSTANT import *
-from utils.matching import Greedy, Hungarian, MNN
+from utils.matching import Hungarian
 from geometry.nusc_distance import iou_bev, iou_3d, giou_bev, giou_3d, d_eucl
 from utils.script import mask_tras_dets, fast_compute_check, reorder_metrics, spec_metric_mask
 
@@ -48,10 +48,9 @@ class Tracker:
             'no_val_track_result'[optimal]: bool
         }
         """
+        # step0. reset tracker for each seq
+        if data_info['is_first_frame']: self.reset()
         self.det_infos, self.frame_id, self.seq_id = data_info, data_info['frame_id'], data_info['seq_id']
-        
-        # step0. reinit tracker for each seq
-        if self.det_infos['is_first_frame']: self.reset()
 
         # step1. predict all valid trajectories
         self.tras_predict()
@@ -68,13 +67,17 @@ class Tracker:
         # step4. use observations(detection) to update the corresponding trajectories
         # and output unmatch trajectories(up to punish_num) states, and output new trajectories states
         dict_track_res = self.tras_update(tracking_ids, data_info)
-        if len(dict_track_res['np_track_res']) == 0: return 
+        
+        # corner case, all valid trackelets dead at the current frame
+        if len(dict_track_res['np_track_res']) == 0: 
+            data_info.update({'no_val_track_result': True})
+            return 
             
         # step5. update and output tracking results
         data_info.update({
             'np_track_res': dict_track_res['np_track_res'],
             'box_track_res': dict_track_res['box_track_res'],
-            'bm_track_res': dict_track_res['bottom_corners_track_res'],
+            'bm_track_res': dict_track_res['bm_track_res'],
         })
         
         # whether to use post-predict to reduce FP prediction
@@ -108,9 +111,9 @@ class Tracker:
             pred_object = tra[self.frame_id]
             
             all_valid_ids.append(tra_id)
-            pred_boxes.append(pred_object.pred_box)
-            pred_infos.append(pred_object.pred_infos)
-            pred_bms.append(pred_object.pred_box.bottom_corners_)
+            pred_boxes.append(pred_object.predict_box)
+            pred_infos.append(pred_object.predict_infos)
+            pred_bms.append(pred_object.predict_bms)
             
         # only for debug
         if self.is_debug:
@@ -150,7 +153,7 @@ class Tracker:
         data_info.update({
             'np_track_res': dict_track_res['np_track_res'],
             'box_track_res': dict_track_res['box_track_res'],
-            'bm_track_res': dict_track_res['bottom_corners_track_res'],
+            'bm_track_res': dict_track_res['bm_track_res'],
         })
 
 
@@ -168,7 +171,7 @@ class Tracker:
             }
         """
         tracking_ids = tracking_ids.tolist()
-        assert len(tracking_ids) == self.det_infos['det_num'] and len(self.valid_tras) != 0
+        assert len(tracking_ids) == self.det_infos['det_num']
         np_res, box_res, bm_res = [], [], []
         new_tras, ten_tras, act_tras = {}, {}, {}
         
@@ -177,7 +180,8 @@ class Tracker:
             dict_det = {
                 'nusc_box': data_info['box_dets'][det_idx],
                 'np_array': data_info['np_dets'][det_idx],
-                'has_velo': data_info['has_velo']
+                'has_velo': data_info['has_velo'],
+                'seq_id': data_info['seq_id']
             }
             if self.is_debug: assert tra_id not in self.dead_tras
             if tra_id in self.valid_tras:
@@ -262,6 +266,7 @@ class Tracker:
 
         if self.fast:
             # metrics only have giou_3d/giou_bev
+            pdb.set_trace()
             first_cost, two_cost = giou_3d(self.det_infos, self.tra_cost_infos)
             first_cost = first_cost[None, :, :].repeat(self.cls_num, axis=0)
         else:
@@ -331,8 +336,8 @@ class Tracker:
         use post-predict to reduce FP prediction
         :param data_info: the final tracking result at each frame
         :retrun: no return, but filter FP results in the data_info
-        TODO: move this function into 'main' Function
         """
+        if 'no_val_track_result' in data_info: return
         post_metric = self.post_nms_cfg['NMS_metric']
         post_thre = self.post_nms_cfg['NMS_thre']
         post_type = self.post_nms_cfg['NMS_type']

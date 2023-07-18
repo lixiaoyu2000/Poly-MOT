@@ -16,8 +16,8 @@ class CA:
         Measure vector: [x, y, z, w, l, h, (vx, vy, optional), ry]
     """
     def __init__(self, has_velo: bool, dt: float) -> None:
-        self.MD = 9 if self.has_velo else 7
         self.has_velo, self.dt, self.SD = has_velo, dt, 13
+        self.MD = 9 if self.has_velo else 7
     
     def getInitState(self, det_infos: dict) -> np.mat:
         """from detection init tracklet
@@ -127,7 +127,7 @@ class CA:
         return H
     
     @staticmethod
-    def getOutputInfo(self, state: np.mat) -> np.array:
+    def getOutputInfo(state: np.mat) -> np.array:
         """convert state vector in the filter to the output format
         Note that, tra score will be process later
         Args:
@@ -142,7 +142,7 @@ class CA:
         return np.array(list_state)
     
     @staticmethod
-    def warpResYawToPi(self, res: np.mat) -> np.mat:
+    def warpResYawToPi(res: np.mat) -> np.mat:
         """warp res yaw to [-pi, pi) in place
 
         Args:
@@ -152,11 +152,11 @@ class CA:
         Returns:
             np.mat: [measure dim, 1], residual warped to [-pi, pi)
         """
-        res[-1: 0] = warp_to_pi(res[-1: 0])
+        res[-1, 0] = warp_to_pi(res[-1, 0])
         return res
     
     @staticmethod
-    def warpStateYawToPi(self, state: np.mat) -> np.mat:
+    def warpStateYawToPi(state: np.mat) -> np.mat:
         """warp state yaw to [-pi, pi) in place
 
         Args:
@@ -166,7 +166,7 @@ class CA:
         Returns:
             np.mat: [state dim, 1], state after warping
         """
-        state[-1, 0] = warp_to_pi(state[-1: 0])
+        state[-1, 0] = warp_to_pi(state[-1, 0])
         return state
     
     def getStateDim(self) -> int:

@@ -1,13 +1,7 @@
 """
-Count/Confidence-based Trajectory Lifecycle Management Module.
+Count-based Trajectory Lifecycle Management Module.
 Trajectory state(tentative/active/death) transition and tracking score punish
-TODO: to support Confidence-based method and check the correctness of Confidence-based
-
-Thanks: Confidence-based management codes are inspired by CBMOT.
-Code URL: CBMOT(https://github.com/cogsys-tuebingen/CBMOT)
 """
-import numpy as np
-
 
 class LifeManagement:
     def __init__(self, timestamp: int, config: dict, class_label: int):
@@ -36,10 +30,10 @@ class LifeManagement:
             self.time_since_update = 0
 
         if self.state == 'tentative':
-            if self.time_since_update > 0:
-                self.state = 'dead'
-            elif (self.hit >= self.min_hit) or (timestamp <= self.min_hit):
+            if (self.hit >= self.min_hit) or (timestamp <= self.min_hit):
                 self.state = 'active'
+            elif self.time_since_update > 0:
+                self.state = 'dead'
             else: pass
         elif self.state == 'active':
             if self.time_since_update >= self.max_age:

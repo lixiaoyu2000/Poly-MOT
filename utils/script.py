@@ -41,7 +41,7 @@ def reorder_metrics(metrics: dict) -> dict:
     :return: dict, {key(metrics, str): value(class_labels, list)}
     """
     new_metrics = {}
-    for cls, metric in metrics:
+    for cls, metric in metrics.items():
         if metric in new_metrics: new_metrics[metric].append(cls)
         else: new_metrics[metric] = []
     return new_metrics

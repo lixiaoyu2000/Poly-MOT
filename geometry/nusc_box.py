@@ -45,3 +45,7 @@ class NuscBox(Box):
 
     def box_bottom_area(self) -> float:
         return self.wlh[0] * self.wlh[1]
+    
+    def __repr__(self):
+        repr_str = super().__repr__() + ', tracking id: {}'
+        return repr_str.format(self.tracking_id)

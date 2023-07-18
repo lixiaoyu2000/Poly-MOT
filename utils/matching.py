@@ -1,5 +1,5 @@
 """
-one/two-stage category-specific matching strategy, see two-stage details on the Poly-MOT paper
+category-specific matching strategy, see more details on the Poly-MOT paper
 Three implemented matching methods(Greedy, Hungarian, Mutual Nearest Neighbor(MNN))
 TODO: to support more matching methods
 """
@@ -9,32 +9,36 @@ import numpy as np
 from typing import Tuple
 
 
-def Hungarian(cost_matrix: np.array, threshold: dict) -> Tuple[list, list, np.array, np.array]:
+def Hungarian(cost_matrix: np.array, thresholds: dict) -> Tuple[list, list, np.array, np.array]:
     """implement hungarian algorithm with lap
 
     Args:
-        cost_matrix (np.array): 3-ndim or 2-ndim, [N_cls, N_det, N_tra], invaild cost equal to np.inf
-        threshold (dict): matching threshold to restrict FP matches
+        cost_matrix (np.array): 3-ndim [N_cls, N_det, N_tra] or 2-ndim, invaild cost equal to np.inf
+        thresholds (dict): matching thresholds to restrict FP matches
 
     Returns:
         Tuple[list, list, np.array, np.array]: matched det, matched tra, unmatched det, unmatched tra
     """
+    assert cost_matrix.ndim == 2 or cost_matrix.ndim == 3, "cost matrix must be valid."
+    if cost_matrix.ndim == 2: cost_matrix = cost_matrix[None, :, :]
+    assert len(thresholds) == cost_matrix.shape[0], "the number of thresholds should be equal to cost matrix number."
 
-    if cost_matrix.size == 0:
-        return (
-            np.empty((0, 2), dtype=int),
-            tuple(range(cost_matrix.shape[0])),
-            tuple(range(cost_matrix.shape[1])),
-        )
-    matches, unmatched_a, unmatched_b = [], [], []
-    # cost:总代价, x:一个大小为n的数组，用于指定每一行被分配到哪一列, y: 一个大小为n的数组，用于指定每列被分配到哪一行
-    cost, x, y = lap.lapjv(cost_matrix, extend_cost=True, cost_limit=threshold)
-    for ix, mx in enumerate(x):
-        if mx >= 0:
-            matches.append([ix, mx])
-    # 没有匹配的det
-    unmatched_a = np.where(x < 0)[0]
-    # 没有匹配的pre
-    unmatched_b = np.where(y < 0)[0]
-    matches = np.asarray(matches)
-    return matches, unmatched_a, unmatched_b
+    # solve cost matrix
+    m_det, m_tra = [], []
+    for cls_idx, cls_cost in enumerate(cost_matrix):
+        _, x, y = lap.lapjv(cls_cost, extend_cost=True, cost_limit=thresholds[cls_idx])
+        for ix, mx in enumerate(x):
+            if mx >= 0:
+                assert (ix not in m_det) and (mx not in m_tra) 
+                m_det.append(ix)
+                m_tra.append(mx)
+                            
+    # unmatched tra and det
+    num_det, num_tra = cost_matrix.shape[1:]
+    if len(m_det) == 0:
+        um_det, um_tra = np.arange(num_det), np.arange(num_tra)
+    else:
+        um_det = np.setdiff1d(np.arange(num_det), np.array(m_det))
+        um_tra = np.setdiff1d(np.arange(num_tra), np.array(m_tra))
+
+    return m_det, m_tra, um_det, um_tra

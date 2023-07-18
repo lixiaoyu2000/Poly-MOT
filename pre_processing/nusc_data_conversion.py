@@ -4,8 +4,8 @@ data format conversion and data concat on the NuScenes dataset
 
 import pdb
 import numpy as np
+from typing import Tuple, List
 from geometry import NuscBox
-from typing import List, Union
 from data.script.NUSC_CONSTANT import *
 
 
@@ -29,12 +29,12 @@ def concat_dict_attr(dictbox: dict, *attrs) -> List:
     return res
 
 
-def dictdet2array(dets: List[dict], *attrs) -> Union[List, np.array]:
+def dictdet2array(dets: List[dict], *attrs) -> Tuple[List, np.array]:
     listdets = [concat_dict_attr(det, *attrs) for det in dets if det['detection_name'] in CLASS_SEG_TO_STR_CLASS]
     return listdets, np.array(listdets)
 
 
-def arraydet2box(dets: np.array) -> Union[np.array[NuscBox], np.array]:
+def arraydet2box(dets: np.array):
     # det -> (x, y, z, w, l, h, vx, vy, ry(orientation, 1x4), det_score, class_label)
     if dets.ndim == 1: dets = dets[None, :]
     assert dets.shape[1] == 14, "The number of observed states must satisfy 14"

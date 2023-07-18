@@ -13,4 +13,4 @@ class FrameObject:
         
     def __repr__(self) -> str:
         repr_str = 'Predict state: {}, Update state: {}'
-        return repr_str.format(self.predict_box, self.update_box)
+        return repr_str.format(self.predict_infos, self.update_infos)

@@ -1,7 +1,8 @@
 import yaml, argparse, time, os, json, multiprocessing
-from tqdm import tqdm
 from dataloader.nusc_loader import NuScenesloader
-from geometry.nusc_distance import giou_3d, giou_3d_s, iou_3d, iou_3d_s, giou_bev, giou_bev_s, iou_bev, iou_bev_s
+from tracking.nusc_tracker import Tracker
+from tqdm import tqdm
+import pdb
 
 parser = argparse.ArgumentParser()
 # running configurations
@@ -16,10 +17,9 @@ parser.add_argument('--result_path', type=str, default='result/' + localtime)
 parser.add_argument('--eval_path', type=str, default='eval_result/')
 args = parser.parse_args()
 
-def run(frame_data):
-    return frame_data['box_dets']
 
 def main(result_path, token, process, nusc_loader):
+    # PolyMOT modal is completely dependent on the detector modal
     result = {
         "results": {},
         "meta": {
@@ -30,33 +30,46 @@ def main(result_path, token, process, nusc_loader):
             "use_external": False,
         }
     }
+    # tracking and output file
+    nusc_tracker = Tracker(config=nusc_loader.config)
     for frame_data in tqdm(nusc_loader, desc='Running', total=len(nusc_loader) // process, position=token):
         if process > 1 and frame_data['seq_id'] % process != token:
             continue
         sample_token = frame_data['sample_token']
-        # mot
-        predict_boxes = run(frame_data)
+        # track each sequence
+        nusc_tracker.tracking(frame_data)
+        """
+        only for debug
+        {
+            'np_track_res': np.array, [num, 17] add 'tracking_id', 'seq_id', 'frame_id'
+            'box_track_res': np.array[NuscBox], [num,]
+            'no_val_track_result': bool
+        }
+        """
         # output process
         sample_results = []
-        for predict_box in predict_boxes:
-            predict_box.box_id = 0
-            box_result = {
-                "sample_token": sample_token,
-                "translation": [float(predict_box.center[0]), float(predict_box.center[1]), float(predict_box.center[2])],
-                "size": [float(predict_box.wlh[0]), float(predict_box.wlh[1]), float(predict_box.wlh[2])],
-                "rotation": [float(predict_box.orientation[0]), float(predict_box.orientation[1]),
-                                float(predict_box.orientation[2]), float(predict_box.orientation[3])],
-                "velocity": [float(predict_box.velocity[0]), float(predict_box.velocity[1])],
-                "tracking_id": str(predict_box.box_id),
-                "tracking_name": predict_box.name,
-                "tracking_score": predict_box.score,
-            }
-            sample_results.append(box_result.copy())
+        if 'no_val_track_result' not in frame_data:
+            for predict_box in frame_data['box_track_res']:
+                box_result = {
+                    "sample_token": sample_token,
+                    "translation": [float(predict_box.center[0]), float(predict_box.center[1]), float(predict_box.center[2])],
+                    "size": [float(predict_box.wlh[0]), float(predict_box.wlh[1]), float(predict_box.wlh[2])],
+                    "rotation": [float(predict_box.orientation[0]), float(predict_box.orientation[1]),
+                                    float(predict_box.orientation[2]), float(predict_box.orientation[3])],
+                    "velocity": [float(predict_box.velocity[0]), float(predict_box.velocity[1])],
+                    "tracking_id": str(predict_box.tracking_id),
+                    "tracking_name": predict_box.name,
+                    "tracking_score": predict_box.score,
+                }
+                sample_results.append(box_result.copy())
+                
+        # add to the output file
         if sample_token in result["results"]:
             result["results"][sample_token] = result["results"][sample_token] + sample_results
         else:
             result["results"][sample_token] = sample_results
-    # result process and save
+    
+    # sort track result by the tracking score
     for sample_token in result["results"].keys():
         confs = sorted(
             [
@@ -68,6 +81,8 @@ def main(result_path, token, process, nusc_loader):
             result["results"][sample_token][ind]
             for _, ind in confs[: min(500, len(confs))]
         ]
+        
+    # write file
     if (process > 1):
         json.dump(result, open(result_path + str(token) +".json", "w"))
     else:

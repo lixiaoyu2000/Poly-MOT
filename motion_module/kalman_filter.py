@@ -5,9 +5,10 @@ Three core functions for each model: state init, state predict and state update
 Linear Kalman Filter for CA, CV Model, Extend Kalman Filter for CTRA, CTRV, Bicycle Model
 Ref: https://en.wikipedia.org/wiki/Kalman_filter
 """
+import pdb
 import numpy as np
-from nusc_object import FrameObject
-from motion_model import CA, CTRA, BICYCLE
+from .nusc_object import FrameObject
+from .motion_model import CA
 from pre_processing import arraydet2box, concat_box_attr
 
 class KalmanFilter:
@@ -17,16 +18,15 @@ class KalmanFilter:
         # init basic infos, no control input
         self.seq_id = det_infos['seq_id']
         self.initstamp = self.timestamp = timestamp
-        self.model = config['motion_model']['model'][self.class_label]
         self.tracking_id, self.class_label = track_id, det_infos['np_array'][-1]
+        self.model = config['motion_model']['model'][self.class_label]
         self.dt, self.has_velo = config['basic']['LiDAR_interval'], config['basic']['has_velo']
         # init FrameObject for each frame
         self.state, self.frame_objects = None, {}
     
-    def initialize(self, timestamp: int, det: dict) -> None:
+    def initialize(self, det: dict) -> None:
         """initialize the filter parameters
         Args:
-            timestamp (int): current frame id
             det (dict): detection infos under different data format.
             {
                 'nusc_box': NuscBox,
@@ -95,18 +95,18 @@ class KalmanFilter:
         
         # data format conversion
         inner_info, exter_info = tra_info['inner_state'], tra_info['exter_state']
-        extra_info = [self.tracking_id, self.seq_id, timestamp]
+        extra_info = np.array([self.tracking_id, self.seq_id, timestamp])
         box_info, bm_info = arraydet2box(exter_info)
 
         # update each frame infos 
         if mode == 'update':
             frame_object = self.frame_objects[timestamp]
-            frame_object.update_bms, frame_object.update_box = bm_info, box_info
-            frame_object.update_state, frame_object.update_infos = inner_info, np.array(exter_info, extra_info)
+            frame_object.update_bms, frame_object.update_box = bm_info[0], box_info[0]
+            frame_object.update_state, frame_object.update_infos = inner_info, np.append(exter_info, extra_info)
         elif mode == 'predict':
             frame_object = FrameObject()
-            frame_object.predict_bms, frame_object.predict_box = bm_info, box_info
-            frame_object.predict_state, frame_object.predict_infos = inner_info, np.array(exter_info, extra_info)
+            frame_object.predict_bms, frame_object.predict_box = bm_info[0], box_info[0]
+            frame_object.predict_state, frame_object.predict_infos = inner_info, np.append(exter_info, extra_info)
             self.frame_objects[timestamp] = frame_object
         else: raise Exception('mode must be update or predict')
     
@@ -177,7 +177,7 @@ class LinearKalmanFilter(KalmanFilter):
             'inner_state': self.state,
             'exter_state': output_info
         }
-        self.addFrameObject(self, timestamp, tra_infos, 'predict')
+        self.addFrameObject(timestamp, tra_infos, 'predict')
         
     def update(self, timestamp: int, det: dict = None) -> None:
         # corner case, no det for updating
@@ -200,7 +200,7 @@ class LinearKalmanFilter(KalmanFilter):
             'inner_state': self.state,
             'exter_state': output_info
         }
-        self.addFrameObject(self, timestamp, tra_infos, 'update')
+        self.addFrameObject(timestamp, tra_infos, 'update')
         
         
         

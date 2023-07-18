@@ -12,13 +12,13 @@ EagerMOT(https://github.com/aleksandrkim61/EagerMOT)
 
 import pdb
 import numpy as np
-from typing import List, Tuple, Union
+from typing import Tuple
 from shapely.geometry import Polygon
 from scipy.spatial import ConvexHull
 from utils import expand_dims
 from pre_processing.nusc_data_conversion import concat_box_attr
-from geometry import PolyArea2D_s, PolyArea2D, yaw_punish_factor, \
-    mask_between_boxes, logical_or_mask, loop_convex, loop_inter, NuscBox
+from geometry import PolyArea2D_s, yaw_punish_factor, mask_between_boxes, \
+    logical_or_mask, loop_convex, loop_inter, NuscBox
 
 
 def iou_bev_s(box_a: NuscBox, box_b: NuscBox) -> float:
