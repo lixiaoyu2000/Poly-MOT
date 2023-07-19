@@ -1,7 +1,7 @@
 """
 matching script
 """
-
+import pdb
 import numpy as np
 from data.script.NUSC_CONSTANT import *
 from geometry.nusc_utils import mask_between_boxes
@@ -43,7 +43,7 @@ def reorder_metrics(metrics: dict) -> dict:
     new_metrics = {}
     for cls, metric in metrics.items():
         if metric in new_metrics: new_metrics[metric].append(cls)
-        else: new_metrics[metric] = []
+        else: new_metrics[metric] = [cls]
     return new_metrics
 
 

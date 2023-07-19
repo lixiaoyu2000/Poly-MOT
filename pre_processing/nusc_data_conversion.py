@@ -12,7 +12,14 @@ from data.script.NUSC_CONSTANT import *
 def concat_box_attr(nuscbox: NuscBox, *attrs) -> List:
     res = []
     for attr in attrs:
-        res += getattr(nuscbox, attr)
+        tmp_attr = getattr(nuscbox, attr)
+        if isinstance(tmp_attr, list):
+            res += getattr(nuscbox, attr)
+        elif isinstance(tmp_attr, (float, int)):
+            res +=[tmp_attr]
+        elif isinstance(tmp_attr, np.ndarray):
+            res += tmp_attr.tolist()
+        else: raise Exception("unsupport date format to concat")
     return res
 
 
@@ -34,7 +41,7 @@ def dictdet2array(dets: List[dict], *attrs) -> Tuple[List, np.array]:
     return listdets, np.array(listdets)
 
 
-def arraydet2box(dets: np.array):
+def arraydet2box(dets: np.array, ids: np.array = None):
     # det -> (x, y, z, w, l, h, vx, vy, ry(orientation, 1x4), det_score, class_label)
     if dets.ndim == 1: dets = dets[None, :]
     assert dets.shape[1] == 14, "The number of observed states must satisfy 14"
@@ -43,6 +50,7 @@ def arraydet2box(dets: np.array):
         curr_box = NuscBox(center=det[0:3], size=det[3:6], rotation=det[8:12],
                             velocity=tuple(det[6:8].tolist() + [0.0]), score=det[12],
                             name=CLASS_STR_TO_SEG_CLASS[int(det[13])])
+        if ids is not None: curr_box.tracking_id = int(ids[idx])
         NuscBoxes.append(curr_box)
         boxes_bottom_corners.append(curr_box.bottom_corners_)
     return np.array(NuscBoxes), np.array(boxes_bottom_corners)

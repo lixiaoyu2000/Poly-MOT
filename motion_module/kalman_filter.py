@@ -41,7 +41,6 @@ class KalmanFilter:
         Args:
             timestamp (int): current frame id
         """
-
         pass
     
     def update(self, timestamp: int, det: dict = None) -> None:
@@ -63,8 +62,9 @@ class KalmanFilter:
         """
         if det is None: raise("detection cannot be None")
         
-        mea_attr = ('translation', 'size', 'velocity', 'yaw') if self.has_velo else ('translation', 'size', 'yaw')
+        mea_attr = ('center', 'wlh', 'velocity', 'yaw') if self.has_velo else ('translation', 'size', 'yaw')
         list_det = concat_box_attr(det['nusc_box'], *mea_attr)
+        if self.has_velo: list_det.pop(8)
         
         # only for debug, delete on the release version
         # ensure the measure yaw goes around [0, 0, 1]
@@ -96,7 +96,7 @@ class KalmanFilter:
         # data format conversion
         inner_info, exter_info = tra_info['inner_state'], tra_info['exter_state']
         extra_info = np.array([self.tracking_id, self.seq_id, timestamp])
-        box_info, bm_info = arraydet2box(exter_info)
+        box_info, bm_info = arraydet2box(exter_info, np.array([self.tracking_id]))
 
         # update each frame infos 
         if mode == 'update':
@@ -201,6 +201,37 @@ class LinearKalmanFilter(KalmanFilter):
             'exter_state': output_info
         }
         self.addFrameObject(timestamp, tra_infos, 'update')
+        
+        
+class ExtendKalmanFilter(KalmanFilter):
+    def __init__(self, timestamp: int, config: dict, track_id: int, det_infos: dict) -> None:
+        super().__init__(timestamp, config, track_id, det_infos)
+        # set motion model, default Constant Acceleration and Turn Rate(CTRA) for EKF
+        self.model = globals()[self.model](self.has_velo, self.dt) if self.model in ['CTRA', 'BICYCLE'] \
+                     else globals()['CTRA'](self.has_velo, self.dt)
+        # Transition and Observation Matrices are changing in the EKF
+        self.initialize(det_infos)
+    
+    def initialize(self, det_infos: dict) -> None:
+        # state transition
+        self.F = self.model.getTransitionF()
+        self.Q = self.model.getProcessNoiseQ()
+        self.SD = self.model.getStateDim()
+        self.P = self.model.getInitCovP(self.class_label)
+        
+        # state to measurement transition
+        self.R = self.model.getMeaNoiseR()
+        self.H = self.model.getMeaStateH()
+
+        # get different data format tracklet's state
+        self.state = self.model.getInitState(det_infos)
+        tra_infos = {
+            'inner_state': self.state,
+            'exter_state': det_infos['np_array']
+        }
+        self.addFrameObject(self.timestamp, tra_infos, 'predict')
+        self.addFrameObject(self.timestamp, tra_infos, 'update')
+    
         
         
         

@@ -40,6 +40,10 @@ class LifeManagement:
                 self.state = 'dead'
             else: pass
         else: raise Exception("dead trajectory cannot be updated")
+        
+    def __repr__(self) -> str:
+        repr_str = 'init_timestamp: {}, time_since_update: {}, hit: {}, state: {}'
+        return repr_str.format(self.init_time, self.time_since_update, self.hit, self.state)
 
 
 

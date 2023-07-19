@@ -10,7 +10,7 @@ import numpy as np
 from .nusc_trajectory import Trajectory
 from data.script.NUSC_CONSTANT import *
 from utils.matching import Hungarian
-from geometry.nusc_distance import iou_bev, iou_3d, giou_bev, giou_3d, d_eucl
+from geometry.nusc_distance import iou_bev, iou_3d, giou_bev, giou_3d, d_eucl, giou_3d_s
 from utils.script import mask_tras_dets, fast_compute_check, reorder_metrics, spec_metric_mask
 
 
@@ -82,6 +82,9 @@ class Tracker:
         
         # whether to use post-predict to reduce FP prediction
         if self.post_nms_cfg['post_nms']: self.post_nms_tras(data_info)
+        
+        # only for debug
+        assert len(self.tentative_tras) == 0, "no tentative tracklet in the best performance version."
 
     def tras_predict(self) -> None:
         """
@@ -218,7 +221,7 @@ class Tracker:
                     bm_res.append(update_object.predict_bms)
             elif tra.life_management.state == 'tentative':
                 ten_tras[tra_id] = tra
-            elif tra.life_managemnet.state == 'dead':
+            elif tra.life_management.state == 'dead':
                 assert tra_id not in self.dead_tras
                 self.dead_tras[tra_id] = tra
             else: raise Exception('Tracjectory state only have three attributes')
@@ -232,7 +235,6 @@ class Tracker:
             'box_track_res': box_res,
             'bm_track_res': bm_res,
         }
-        
         return dict_track_res   
 
     def data_association(self) -> np.array:
@@ -266,9 +268,9 @@ class Tracker:
 
         if self.fast:
             # metrics only have giou_3d/giou_bev
-            pdb.set_trace()
-            first_cost, two_cost = giou_3d(self.det_infos, self.tra_cost_infos)
+            two_cost, first_cost = giou_3d(self.det_infos, self.tra_cost_infos)
             first_cost = first_cost[None, :, :].repeat(self.cls_num, axis=0)
+            first_cost[self.re_metrics['giou_bev']] = two_cost
         else:
             two_cost = globals()[self.second_metric](self.det_infos, self.tra_cost_infos)
             first_cost = np.zeros((self.cls_num, det_num, tra_num))
@@ -276,7 +278,7 @@ class Tracker:
                 # True denotes invalid(the object's category is not specific)
                 self.tra_cost_infos['mask'] = spec_metric_mask(cls_list, det_labels, tra_labels)
                 if metric in METRIC:
-                    cost1, _ = globals()[metric](self.det_infos, self.tra_cost_infos)
+                    _, cost1 = globals()[metric](self.det_infos, self.tra_cost_infos)
                 else:
                     cost1 = globals()[metric](self.det_infos, self.tra_cost_infos)
                 first_cost[cls_list] = cost1

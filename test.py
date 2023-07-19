@@ -86,7 +86,7 @@ def main(result_path, token, process, nusc_loader):
     if (process > 1):
         json.dump(result, open(result_path + str(token) +".json", "w"))
     else:
-        json.dump(result, open(result_path +"results.json", "w"))
+        json.dump(result, open(result_path +"/results.json", "w"))
 
 def eval(result_path, eval_path, nusc_path):
     from nuscenes.eval.tracking.evaluate import TrackingEval

@@ -69,12 +69,12 @@ class NuScenesloader:
         # corner case, no det left
         else: keep = keep_num = 0
 
-        # print(f"Total {len(list_dets) - keep_num} bboxes are filtered; "
-        #       f"{len(list_dets) - len(np_dets)} during SF, "
-        #       f"{len(np_dets) - keep_num} during NMS, "
-        #       f"Still {keep_num} bboxes left. "
-        #       f"seq id {self.seq_id}, frame id {self.frame_id}, "
-        #       f"Total frame id {item + 1}.")
+        print(f"Total {len(list_dets) - keep_num} bboxes are filtered; "
+              f"{len(list_dets) - len(np_dets)} during SF, "
+              f"{len(np_dets) - keep_num} during NMS, "
+              f"Still {keep_num} bboxes left. "
+              f"seq id {self.seq_id}, frame id {self.frame_id}, "
+              f"Total frame id {item + 1}.")
 
         # Available information for the current frame
         data_info = {

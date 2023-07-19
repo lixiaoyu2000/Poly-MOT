@@ -98,7 +98,7 @@ class CA:
         Returns:
             np.mat: measure noise matrix(fix)
         """
-        return np.mat(np.eye(self.SD)) * 0.001
+        return np.mat(np.eye(self.MD)) * 0.001
     
     def getMeaStateH(self) -> np.mat:
         """get state to measure transition matrix.
