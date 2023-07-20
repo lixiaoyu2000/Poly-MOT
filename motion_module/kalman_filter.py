@@ -69,6 +69,7 @@ class KalmanFilter:
         # only for debug, delete on the release version
         # ensure the measure yaw goes around [0, 0, 1]
         assert list_det[-1] == det['nusc_box'].orientation.radians and det['nusc_box'].orientation.axis[-1] >= 0
+        assert len(list_det) == 9 if self.has_velo else 7
         
         return np.mat(list_det).T
         
@@ -190,7 +191,7 @@ class LinearKalmanFilter(KalmanFilter):
         _S = self.H * self.P * self.H.T + self.R
         _KF_GAIN = self.P * self.H.T * _S.I
         
-        self.state = self.state + _KF_GAIN * _res
+        self.state += _KF_GAIN * _res
         self.P = (np.mat(np.identity(self.SD)) - _KF_GAIN * self.H) * self.P
         
         # output updated state to the result file
@@ -213,15 +214,13 @@ class ExtendKalmanFilter(KalmanFilter):
         self.initialize(det_infos)
     
     def initialize(self, det_infos: dict) -> None:
-        # state transition
-        self.F = self.model.getTransitionF()
-        self.Q = self.model.getProcessNoiseQ()
+        # init errorcov categoty-specific
         self.SD = self.model.getStateDim()
         self.P = self.model.getInitCovP(self.class_label)
         
-        # state to measurement transition
+        # set noise matrix(fixed)
+        self.Q = self.model.getProcessNoiseQ()
         self.R = self.model.getMeaNoiseR()
-        self.H = self.model.getMeaStateH()
 
         # get different data format tracklet's state
         self.state = self.model.getInitState(det_infos)
@@ -231,8 +230,63 @@ class ExtendKalmanFilter(KalmanFilter):
         }
         self.addFrameObject(self.timestamp, tra_infos, 'predict')
         self.addFrameObject(self.timestamp, tra_infos, 'update')
-    
         
+    def predict(self, timestamp: int) -> None:
+        # get jacobian matrix F using the final estimated state of the previous frame
+        self.F = self.model.getTransitionF(self.state)
+        
+        # state and errorcov transition
+        self.state = self.model.stateTransition(self.state)
+        self.P = self.F * self.P * self.F.T + self.Q
+        
+        # convert the state in filter to the output format
+        self.model.warpStateYawToPi(self.state)
+        output_info = self.getOutputInfo(self.state)
+        tra_infos = {
+            'inner_state': self.state,
+            'exter_state': output_info
+        }
+        self.addFrameObject(timestamp, tra_infos, 'predict')
+    
+    def update(self, timestamp: int, det: dict = None) -> None:
+        # corner case, no det for updating
+        if det is None: return
+        
+        # get measure infos for updating, and project state into meausre space
+        meas_info = self.getMeasureInfo(det)
+        state_info = self.StateToMeasure(self.state)
+        
+        # get state residual, and warp angle diff inplace
+        _res = meas_info - state_info
+        self.model.warpResYawToPi(_res)
+        
+        # get jacobian matrix H using the predict state
+        self.H = self.model.getMeaStateH(self.state)
+        
+        # obtain KF gain and update state and errorcov
+        _S = self.H * self.P * self.H.T + self.R
+        _KF_GAIN = self.P * self.H.T * _S.I
+        _I_KH = np.mat(np.identity(self.SD)) - _KF_GAIN * self.H
+        
+        self.state += _KF_GAIN * _res
+        self.P = _I_KH * self.P * _I_KH.T + _KF_GAIN * self.R * _KF_GAIN.T
+        
+        # output updated state to the result file
+        self.model.warpStateYawToPi(self.state)
+        output_info = self.getOutputInfo(self.state)
+        tra_infos = {
+            'inner_state': self.state,
+            'exter_state': output_info
+        }
+        self.addFrameObject(timestamp, tra_infos, 'update')
+        
+        
+        
+        
+        
+        
+        
+            
         
         
         
