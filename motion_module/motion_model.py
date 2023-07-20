@@ -330,19 +330,36 @@ class CTRA:
         """
         dt = self.dt
         x, y, z, w, l, h, v, a, theta, omega = state.T.tolist()[0]
+        yaw_sin, yaw_cos = np.sin(theta), np.cos(theta)
         
         # corner case, tiny turn rate
         if abs(omega) < 0.001:
-            F = np.mat([[1, 0, 0, 0, 0, 0, dt*cos(yaw),  dt**2*cos(yaw)/2, -(a*dt**2/2 + dt*v)*sin(yaw), 0],
-                        [0, 1, 0, 0, 0, 0, dt*sin(yaw),  dt**2*sin(yaw)/2,  (a*dt**2/2 + dt*v)*cos(yaw), 0],
-                        [0, 0, 1, 0, 0, 0,           0,                 0,                            0, 0],
-                        [0, 0, 0, 1, 0, 0,           0,                 0,                            0, 0],
-                        [0, 0, 0, 0, 1, 0,           0,                 0,                            0, 0],
-                        [0, 0, 0, 0, 0, 1,          0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 1, dt,0, 0],
-                        [0, 0, 0, 0, 0, 0, 0, 1,0, 0],
-                        [0, 0, 0, 0, 0, 0, 0, 0,1,dt],
-                        [0, 0, 0, 0, 0, 0, 0, 0,0,1]])
+            displacement = v * dt + a * dt ** 2 / 2
+            F = np.mat([[1, 0, 0, 0, 0, 0,  dt*yaw_cos,   dt**2*yaw_cos/2,        -displacement*yaw_sin,  0],
+                        [0, 1, 0, 0, 0, 0,  dt*yaw_sin,   dt**2*yaw_sin/2,         displacement*yaw_cos,  0],
+                        [0, 0, 1, 0, 0, 0,           0,                 0,                            0,  0],
+                        [0, 0, 0, 1, 0, 0,           0,                 0,                            0,  0],
+                        [0, 0, 0, 0, 1, 0,           0,                 0,                            0,  0],
+                        [0, 0, 0, 0, 0, 1,           0,                 0,                            0,  0],
+                        [0, 0, 0, 0, 0, 0,           1,                dt,                            0,  0],
+                        [0, 0, 0, 0, 0, 0,           0,                 1,                            0,  0],
+                        [0, 0, 0, 0, 0, 0,           0,                 0,                            1, dt],
+                        [0, 0, 0, 0, 0, 0,           0,                 0,                            0,  1]])
+        else:
+            ry_rate_inv, ry_rate_inv_square, ry_rate_inv_cube = 1 / omega, 1 / (omega * omega), 1 / (omega * omega * omega)
+            next_v, next_ry = v + a * dt, theta + omega * dt
+            next_yaw_sin, next_yaw_cos = np.sin(next_ry), np.cos(next_ry)
+            
+            F = np.mat([[1, 0, 0, 0, 0, 0,  -ry_rate_inv*(yaw_sin-next_yaw_sin),   -ry_rate_inv_square*(yaw_cos-next_yaw_cos)+ry_rate_inv*dt*next_yaw_sin,        ry_rate_inv_square*a*(yaw_sin-next_yaw_sin)+ry_rate_inv*(next_v*next_yaw_cos-v*yaw_cos),  asdasd],
+                        [0, 1, 0, 0, 0, 0,   ry_rate_inv*(yaw_cos-next_yaw_cos),   -ry_rate_inv_square*(yaw_sin-next_yaw_sin)-ry_rate_inv*dt*next_yaw_cos,        ry_rate_inv_square*a*(-yaw_cos+next_yaw_cos)+ry_rate_inv*(next_v*next_yaw_sin-v*yaw_sin),  asdasda],
+                        [0, 0, 1, 0, 0, 0,           0,                 0,                            0,  0],
+                        [0, 0, 0, 1, 0, 0,           0,                 0,                            0,  0],
+                        [0, 0, 0, 0, 1, 0,           0,                 0,                            0,  0],
+                        [0, 0, 0, 0, 0, 1,           0,                 0,                            0,  0],
+                        [0, 0, 0, 0, 0, 0,           1,                dt,                            0,  0],
+                        [0, 0, 0, 0, 0, 0,           0,                 1,                            0,  0],
+                        [0, 0, 0, 0, 0, 0,           0,                 0,                            1, dt],
+                        [0, 0, 0, 0, 0, 0,           0,                 0,                            0,  1]])
                                 
         
         
