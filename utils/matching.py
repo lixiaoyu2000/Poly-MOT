@@ -42,3 +42,38 @@ def Hungarian(cost_matrix: np.array, thresholds: dict) -> Tuple[list, list, np.a
         um_tra = np.setdiff1d(np.arange(num_tra), np.array(m_tra))
 
     return m_det, m_tra, um_det, um_tra
+
+
+def Greedy(cost_matrix: np.array, thresholds: dict) -> Tuple[list, list, np.array, np.array]:
+    """implement greedy algorithm
+
+    Args:
+        cost_matrix (np.array): 3-ndim [N_cls, N_det, N_tra] or 2-ndim, invaild cost equal to np.inf
+        thresholds (dict): matching thresholds to restrict FP matches
+
+    Returns:
+        Tuple[list, list, np.array, np.array]: matched det, matched tra, unmatched det, unmatched tra
+    """
+    assert cost_matrix.ndim == 2 or cost_matrix.ndim == 3, "cost matrix must be valid."
+    if cost_matrix.ndim == 2: cost_matrix = cost_matrix[None, :, :]
+    assert len(thresholds) == cost_matrix.shape[0], "the number of thresholds should be egual to cost matrix number."
+    
+    # solve cost matrix
+    m_det, m_tra = [], []
+    num_det, num_tra = cost_matrix.shape[1:] 
+    for cls_idx, cls_cost in enumerate(cost_matrix):
+        for det_idx in range(num_det):
+            tra_idx = cls_cost[det_idx].argmin()
+            if cls_cost[det_idx][tra_idx] <= thresholds[cls_idx]:
+                cost_matrix[cls_idx, :, tra_idx] = 1e18
+                m_det.append(det_idx)
+                m_tra.append(tra_idx)
+    
+    # unmatched tra and det
+    if len(m_det) == 0:
+        um_det, um_tra = np.arange(num_det), np.arange(num_tra)
+    else:
+        um_det = np.setdiff1d(np.arange(num_det), np.array(m_det))
+        um_tra = np.setdiff1d(np.arange(num_tra), np.array(m_tra))
+    
+    return m_det, m_tra, um_det, um_tra

@@ -12,7 +12,7 @@ import numpy as np
 from .nusc_life_manage import LifeManagement
 from .nusc_score_manage import ScoreManagement
 from motion_module.nusc_object import FrameObject
-from motion_module.kalman_filter import LinearKalmanFilter
+from motion_module.kalman_filter import LinearKalmanFilter, ExtendKalmanFilter
 
 
 class Trajectory:

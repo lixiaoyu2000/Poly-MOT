@@ -24,8 +24,8 @@ motion_model:
   # five motion model, Linear Model: CV, CA, Non-Linear: CTRA, CTRV, BICYCLE
   # note the consistency of the linear relationship between the model and the filter
   # model: {1: 'CTRA', 0: 'BICYCLE', 2: 'CTRA', 3: 'BICYCLE', 4: 'CTRA', 5: 'CTRA', 6: 'CTRA'}
-  filter: {1: 'LinearKalmanFilter', 0: 'LinearKalmanFilter', 2: 'LinearKalmanFilter', 3: 'LinearKalmanFilter', 4: 'LinearKalmanFilter', 5: 'LinearKalmanFilter', 6: 'LinearKalmanFilter'}
-  model: {1: 'CA', 0: 'CA', 2: 'CA', 3: 'CA', 4: 'CA', 5: 'CA', 6: 'CA'}
+  filter: {1: 'ExtendKalmanFilter', 0: 'ExtendKalmanFilter', 2: 'ExtendKalmanFilter', 3: 'ExtendKalmanFilter', 4: 'ExtendKalmanFilter', 5: 'LinearKalmanFilter', 6: 'ExtendKalmanFilter'}
+  model: {1: 'CTRA', 0: 'CTRA', 2: 'CTRA', 3: 'CTRA', 4: 'CTRA', 5: 'CA', 6: 'CTRA'}
 
 life_cycle:
   max_age: {1: 10, 0: 10, 2: 10, 3: 10, 4: 10, 5: 10, 6: 10}

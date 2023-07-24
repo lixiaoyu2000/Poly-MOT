@@ -127,7 +127,9 @@ if __name__ == "__main__":
             results["results"].update(result["results"])
             results["meta"].update(result["meta"])
         json.dump(results, open(args.result_path + '/results.json', "w"))
+        print('writing result in folder: ' + os.path.abspath(args.result_path))
     else:
         main(args.result_path, 0, 1, nusc_loader)
+        print('writing result in folder: ' + os.path.abspath(args.result_path))
     # eval result
     eval(args.result_path, args.eval_path, args.nusc_path)

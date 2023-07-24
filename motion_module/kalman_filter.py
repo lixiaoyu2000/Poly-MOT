@@ -8,7 +8,7 @@ Ref: https://en.wikipedia.org/wiki/Kalman_filter
 import pdb
 import numpy as np
 from .nusc_object import FrameObject
-from .motion_model import CA
+from .motion_model import CA, CTRA
 from pre_processing import arraydet2box, concat_box_attr
 
 class KalmanFilter:
@@ -254,7 +254,7 @@ class ExtendKalmanFilter(KalmanFilter):
         
         # get measure infos for updating, and project state into meausre space
         meas_info = self.getMeasureInfo(det)
-        state_info = self.StateToMeasure(self.state)
+        state_info = self.model.StateToMeasure(self.state)
         
         # get state residual, and warp angle diff inplace
         _res = meas_info - state_info
