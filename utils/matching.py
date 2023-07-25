@@ -77,3 +77,37 @@ def Greedy(cost_matrix: np.array, thresholds: dict) -> Tuple[list, list, np.arra
         um_tra = np.setdiff1d(np.arange(num_tra), np.array(m_tra))
     
     return m_det, m_tra, um_det, um_tra
+
+def MNN(cost_matrix: np.array, thresholds: dict) -> Tuple[list, list, np.array, np.array]:
+    """implement MNN(Mutual Nearest Neighbor) algorithm
+
+    Args:
+        cost_matrix (np.array): 3-ndim [N_cls, N_det, N_tra] or 2-ndim, invaild cost equal to np.inf
+        thresholds (dict): matching thresholds to restrict FP matches
+
+    Returns:
+        Tuple[list, list, np.array, np.array]: matched det, matched tra, unmatched det, unmatched tra
+    """
+    assert cost_matrix.ndim == 2 or cost_matrix.ndim == 3, "cost matrix must be valid."
+    if cost_matrix.ndim == 2: cost_matrix = cost_matrix[None, :, :]
+    assert len(thresholds) == cost_matrix.shape[0], "the number of thresholds should be egual to cost matrix number."
+    
+    # solve cost matrix
+    m_det, m_tra = [], []
+    num_det, num_tra = cost_matrix.shape[1:] 
+    for cls_idx, cls_cost in enumerate(cost_matrix):
+        mask = cls_cost <= thresholds[cls_idx]
+        # mutual nearest
+        mask = mask \
+            * (cls_cost == cls_cost.min(axis= 0)) \
+            * (cls_cost == cls_cost.min(axis= 1)[:, np.newaxis])
+        m_det += np.where(mask == True)[0].tolist()
+        m_tra += np.where(mask == True)[1].tolist()
+    
+    # unmatched tra and det
+    if len(m_det) == 0:
+        um_det, um_tra = np.arange(num_det), np.arange(num_tra)
+    else:
+        um_det = np.setdiff1d(np.arange(num_det), np.array(m_det))
+        um_tra = np.setdiff1d(np.arange(num_tra), np.array(m_tra))
+    return m_det, m_tra, um_det, um_tra

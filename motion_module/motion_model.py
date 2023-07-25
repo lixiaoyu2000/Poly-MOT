@@ -5,6 +5,7 @@ Five implemented motion models, including
 - Three non-linear model: Constant Turn Rate and Acceleration(CTRA), Constant Turn Rate and Velocity(CTRV), Bicycle Model
 """
 import abc
+import pdb
 import numpy as np
 from typing import Tuple
 from pyquaternion import Quaternion
@@ -509,9 +510,9 @@ class BICYCLE(ABC_MODEL):
         """
         if not self.has_velo:
             cls_name = CLASS_STR_TO_SEG_CLASS[cls_label]
-            vector_p = CTRA_INIT_EFKP[cls_name] if cls_name in CTRA_INIT_EFKP else CTRA_INIT_EFKP['bicycle']
+            vector_p = BIC_INIT_EKFP[cls_name] if cls_name in BIC_INIT_EKFP else BIC_INIT_EKFP['bicycle']
         else:
-            vector_p = CTRA_INIT_EFKP['bicycle']
+            vector_p = BIC_INIT_EKFP['bicycle']
         
         return np.mat(np.diag(vector_p))
     
@@ -531,7 +532,7 @@ class BICYCLE(ABC_MODEL):
         """
         
         dt = self.dt
-        _, _, _, _, l, _, v, a, theta, sigma = state
+        _, _, _, _, l, _, v, a, theta, sigma = state.T.tolist()[0]
         beta, _, lr = self.getBicBeta(l, sigma)
         
         sin_yaw, cos_yaw = np.sin(theta), np.cos(theta)
@@ -560,7 +561,7 @@ class BICYCLE(ABC_MODEL):
                         [0, 0, 0, 0, 0, 1,                     0, 0,                                                           0, 0],
                         [0, 0, 0, 0, 0, 0,                     1, 0,                                                           0, 0],
                         [0, 0, 0, 0, 0, 0,                     0, 0,                                                           0, 0],
-                        [0, 0, 0, 0, 0, 0,         v/lr*sin_beta, 0,                                                           1, 0],
+                        [0, 0, 0, 0, 0, 0,        dt/lr*sin_beta, 0,                                                           1, 0],
                         [0, 0, 0, 0, 0, 0,                     0, 0,                                                           0, 1]])
         return F
     
@@ -568,7 +569,7 @@ class BICYCLE(ABC_MODEL):
         """obtain matrix in the motion_module/script/BIC_kinect_jacobian.ipynb
         d(StateToMeasure) / d(state) at predict_state
         """
-        _, _, _, _, l, _, v, _, theta, sigma = state
+        _, _, _, _, l, _, v, _, theta, sigma = state.T.tolist()[0]
         
         geo2gra_dist, lr2l = self.graToGeoDist(l), self.w_r * (0.5 - self.lf_r)
         sin_yaw, cos_yaw = np.sin(theta), np.cos(theta)
@@ -603,7 +604,7 @@ class BICYCLE(ABC_MODEL):
         assert state.shape == (10, 1), "state vector number in BICYCLE must equal to 10"
         
         dt = self.dt
-        x_gra, y_gra, z, w, l, h, v, a, theta, sigma = state
+        x_gra, y_gra, z, w, l, h, v, a, theta, sigma = state.T.tolist()[0]
         beta, _, lr = self.getBicBeta(l, sigma)
         
         # corner case, tiny yaw rate
@@ -627,7 +628,7 @@ class BICYCLE(ABC_MODEL):
         """
         assert state.shape == (10, 1), "state vector number in BICYCLE must equal to 10"
         
-        x_gra, y_gra, z, w, l, h, v, _, theta, sigma = state
+        x_gra, y_gra, z, w, l, h, v, _, theta, sigma = state.T.tolist()[0]
         
         beta, _, _ = self.getBicBeta(l, sigma)
         geo2gra_dist = self.graToGeoDist(l)
@@ -744,7 +745,7 @@ class BICYCLE(ABC_MODEL):
         geo_center = self.graCenterToGeoCenter(gra_center=[state[0, 0], state[1, 0]],
                                                theta=state[-2, 0],
                                                length=state[4, 0])
-        list_state = geo_center + state.T.tolist()[0][2:8] + rotation.tolist()
+        list_state = geo_center.tolist() + state.T.tolist()[0][2:8] + rotation.tolist()
         return np.array(list_state)
     
         
