@@ -16,21 +16,6 @@ CLASS_STR_TO_SEG_CLASS = {0: 'bicycle', 1: 'bus', 2: 'car', 3: 'motorcycle', 4: 
 PI, TWO_PI = np.pi, 2 * np.pi
 
 # init EKFP for different non-linear motion model
-# CTRA_INIT_EFKP = {
-#     # [x, y, theta, v, a, omega, w, l, h, z]
-#     'bus': [10, 10, 1000, 10, 10, 10, 10, 10, 10, 10],
-#     'car': [4, 4, 1, 1000, 4, 0.1, 4, 4, 4, 4],
-#     'trailer': [10, 10, 1000, 10, 10, 10, 10, 10, 10, 10],
-#     'truck': [10, 10, 1000, 10, 10, 10, 10, 10, 10, 10],
-#     'pedestrian': [10, 10, 1000, 10, 10, 10, 10, 10, 10, 10]
-# }
-# BIC_INIT_EKFP = {
-#     # [x, y, v, a, theta, sigma, w, l, h, z]
-#     'bicycle': [10, 10, 10000, 10, 10, 10, 10, 10, 10, 10],
-#     'motorcycle': [4, 4, 100, 4, 4, 1, 4, 4, 4, 4],
-# }
-
-
 CTRA_INIT_EFKP = {
     # [x, y, z, w, l, h, v, a, theta, omega]
     'bus': [10, 10, 10, 10, 10, 10, 10, 10, 1000, 10],
@@ -40,7 +25,7 @@ CTRA_INIT_EFKP = {
     'pedestrian': [10, 10, 10, 10, 10, 10, 10, 10, 1000, 10]
 }
 BIC_INIT_EKFP = {
-    # [x, y, v, a, theta, sigma, w, l, h, z]
-    'bicycle': [10, 10, 10000, 10, 10, 10, 10, 10, 10, 10],
-    'motorcycle': [4, 4, 100, 4, 4, 1, 4, 4, 4, 4],
+    # [x, y, z, w, l, h, v, a, theta, sigma]
+    'bicycle': [10, 10, 10, 10, 10, 10, 10000, 10, 10, 10],
+    'motorcycle': [4, 4, 4, 4, 4, 4, 100, 4, 4, 1],
 }

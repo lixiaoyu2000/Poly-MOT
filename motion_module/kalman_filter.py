@@ -8,7 +8,7 @@ Ref: https://en.wikipedia.org/wiki/Kalman_filter
 import pdb
 import numpy as np
 from .nusc_object import FrameObject
-from .motion_model import CA, CTRA
+from .motion_model import CA, CTRA, BICYCLE
 from pre_processing import arraydet2box, concat_box_attr
 
 class KalmanFilter:

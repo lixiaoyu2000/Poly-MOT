@@ -6,6 +6,7 @@ Five implemented motion models, including
 """
 import abc
 import numpy as np
+from typing import Tuple
 from pyquaternion import Quaternion
 from utils.math import warp_to_pi
 from data.script.NUSC_CONSTANT import *
@@ -455,15 +456,21 @@ class CTRA(ABC_MODEL):
 class BICYCLE(ABC_MODEL):
     """Constant Acceleration and Turn Rate Motion Model
     Basic info:
-        State vector: [x, y, z, w, l, h, v, a, ry, sigma]
-        Measure vector: [x, y, z, w, l, h, (vx, vy, optional), ry]
+        State vector: [x_gra, y_gra, z_geo, w, l, h, v, a, ry, sigma]
+        Measure vector: [x_geo, y_geo, z_geo, w, l, h, (vx, vy, optional), ry]
     Important assumptions:
         1. Although the acceleration interface is reserved, 
-        we still think that the velocity is constant, that is, 
-        the acceleration is considered to be 0.
+        we still think that the velocity is constant when 
+        beta is large. In other cases, the object is considered 
+        to be moving in a straight line with uniform acceleration.
         2. Based on experience, we set two hyperparameters here, 
         wheelbase ratio is set to 0.8, rear tire ratio is set to 0.5.
-        3. the steering angle(sigma) is also considered to be 0.
+        3. the steering angle(sigma) is also considered to be constant.
+        4. x, y described in the filter are gravity center, however, 
+        the infos we measure are geometric center. Transformation 
+        process is required.
+        5. We don't intergrate variable 'length' to the jacobian matrix
+        for simple and fast solution
     """
     def __init__(self, has_velo: bool, dt: float) -> None:
         self.has_velo, self.dt, self.SD = has_velo, dt, 10
@@ -477,8 +484,13 @@ class BICYCLE(ABC_MODEL):
         init_state = np.zeros(shape=self.SD)
         det, det_box = det_infos['np_array'], det_infos['nusc_box']
         
-        # set x, y, z, w, l, h, (v, if velo is valid)
-        init_state[:6] = det[:6]
+        # set gravity center x, y
+        init_state[:2] = self.geoCenterToGraCenter(geo_center=[det[0], det[1]],
+                                                   theta=det_box.yaw,
+                                                   length=det[4])
+        
+        # set z, w, l, h, (v, if velo is valid)
+        init_state[2:6] = det[2:6]
         if self.has_velo: init_state[6] = np.hypot(det[6], det[7])
         
         # set yaw
@@ -506,31 +518,194 @@ class BICYCLE(ABC_MODEL):
     def getProcessNoiseQ(self) -> np.mat:
         """set process noise(fix)
         """
-        pass
+        return np.mat(np.eye(self.SD)) * 1
     
     def getMeaNoiseR(self) -> np.mat:
         """set measure noise(fix)
         """
-        pass
+        return np.mat(np.eye(self.MD)) * 1
     
-    def getTransitionF(self) -> np.mat:
-        """jacobian matrix, 
+    def getTransitionF(self, state: np.mat) -> np.mat:
+        """obtain matrix in the motion_module/script/BIC_kinect_jacobian.ipynb
+        d(stateTransition) / d(state) at previous_state
         """
-        pass
+        
+        dt = self.dt
+        _, _, _, _, l, _, v, a, theta, sigma = state
+        beta, _, lr = self.getBicBeta(l, sigma)
+        
+        sin_yaw, cos_yaw = np.sin(theta), np.cos(theta)
+        
+        # corner case, tiny beta
+        if abs(beta) < 0.001:
+            displacement = a*dt**2/2 + dt*v
+            F = np.mat([[1, 0, 0, 0, 0, 0,  dt*cos_yaw,  dt**2*cos_yaw/2,        -displacement*sin_yaw, 0],
+                        [0, 1, 0, 0, 0, 0,  dt*sin_yaw,  dt**2*sin_yaw/2,         displacement*cos_yaw, 0],
+                        [0, 0, 1, 0, 0, 0,           0,                0,                            0, 0],
+                        [0, 0, 0, 1, 0, 0,           0,                0,                            0, 0],
+                        [0, 0, 0, 0, 1, 0,           0,                0,                            0, 0],
+                        [0, 0, 0, 0, 0, 1,           0,                0,                            0, 0],
+                        [0, 0, 0, 0, 0, 0,           1,               dt,                            0, 0],
+                        [0, 0, 0, 0, 0, 0,           0,                1,                            0, 0],
+                        [0, 0, 0, 0, 0, 0,           0,                0,                            1, 0],
+                        [0, 0, 0, 0, 0, 0,           0,                0,                            0, 1]])
+        else:
+            next_yaw, sin_beta = theta + v / lr * np.sin(beta) * dt, np.sin(beta)
+            v_yaw, next_v_yaw = beta + theta, beta + next_yaw
+            F = np.mat([[1, 0, 0, 0, 0, 0, dt*np.cos(next_v_yaw), 0, -lr*np.cos(v_yaw)/sin_beta + lr*np.cos(next_v_yaw)/sin_beta, 0],
+                        [0, 1, 0, 0, 0, 0, dt*np.sin(next_v_yaw), 0, -lr*np.sin(v_yaw)/sin_beta + lr*np.sin(next_v_yaw)/sin_beta, 0],
+                        [0, 0, 1, 0, 0, 0,                     0, 0,                                                           0, 0],
+                        [0, 0, 0, 1, 0, 0,                     0, 0,                                                           0, 0],
+                        [0, 0, 0, 0, 1, 0,                     0, 0,                                                           0, 0],
+                        [0, 0, 0, 0, 0, 1,                     0, 0,                                                           0, 0],
+                        [0, 0, 0, 0, 0, 0,                     1, 0,                                                           0, 0],
+                        [0, 0, 0, 0, 0, 0,                     0, 0,                                                           0, 0],
+                        [0, 0, 0, 0, 0, 0,         v/lr*sin_beta, 0,                                                           1, 0],
+                        [0, 0, 0, 0, 0, 0,                     0, 0,                                                           0, 1]])
+        return F
     
     def getMeaStateH(self, state: np.mat) -> np.mat:
-        """jacobian matrix, d(StateToMeasure) / d(state) at predict_state
+        """obtain matrix in the motion_module/script/BIC_kinect_jacobian.ipynb
+        d(StateToMeasure) / d(state) at predict_state
         """
+        _, _, _, _, l, _, v, _, theta, sigma = state
+        
+        geo2gra_dist, lr2l = self.graToGeoDist(l), self.w_r * (0.5 - self.lf_r)
+        sin_yaw, cos_yaw = np.sin(theta), np.cos(theta)
+        
+        if self.has_velo:
+            beta, _, _ = self.getBicBeta(l, sigma)
+            v_yaw = beta + theta
+            sin_v_yaw, cos_v_yaw = np.sin(v_yaw), np.cos(v_yaw)
+            H = np.mat([[1, 0, 0, 0, -lr2l*cos_yaw, 0,               0, 0,  geo2gra_dist*sin_yaw, 0],
+                        [0, 1, 0, 0, -lr2l*sin_yaw, 0,               0, 0, -geo2gra_dist*cos_yaw, 0],
+                        [0, 0, 1, 0,             0, 0,               0, 0,                     0, 0],
+                        [0, 0, 0, 1,             0, 0,               0, 0,                     0, 0],
+                        [0, 0, 0, 0,             1, 0,               0, 0,                     0, 0],
+                        [0, 0, 0, 0,             0, 1,               0, 0,                     0, 0],
+                        [0, 0, 0, 0,             0, 0,       cos_v_yaw, 0,          -v*sin_v_yaw, 0],
+                        [0, 0, 0, 0,             0, 0,       sin_v_yaw, 0,           v*cos_v_yaw, 0],
+                        [0, 0, 0, 0,             0, 0,               0, 0,                     1, 0]])
+        else:
+            H = np.mat([[1, 0, 0, 0, -lr2l*cos_yaw, 0,               0, 0,  geo2gra_dist*sin_yaw, 0],
+                        [0, 1, 0, 0, -lr2l*sin_yaw, 0,               0, 0, -geo2gra_dist*cos_yaw, 0],
+                        [0, 0, 1, 0,             0, 0,               0, 0,                     0, 0],
+                        [0, 0, 0, 1,             0, 0,               0, 0,                     0, 0],
+                        [0, 0, 0, 0,             1, 0,               0, 0,                     0, 0],
+                        [0, 0, 0, 0,             0, 1,               0, 0,                     0, 0],
+                        [0, 0, 0, 0,             0, 0,               0, 0,                     1, 0]])
+        
+        return H
     
     def stateTransition(self, state: np.mat) -> np.mat:
         """State transition based on model assumptions
         """
-        pass
+        assert state.shape == (10, 1), "state vector number in BICYCLE must equal to 10"
+        
+        dt = self.dt
+        x_gra, y_gra, z, w, l, h, v, a, theta, sigma = state
+        beta, _, lr = self.getBicBeta(l, sigma)
+        
+        # corner case, tiny yaw rate
+        if abs(beta) > 0.001:
+            next_yaw = theta + v / lr * np.sin(beta) * dt
+            v_yaw, next_v_yaw = beta + theta, beta + next_yaw
+            predict_state = [x_gra + (lr * (np.sin(next_v_yaw) - np.sin(v_yaw))) / np.sin(beta),  # x_gra
+                             y_gra - (lr * (np.cos(next_v_yaw) - np.cos(v_yaw))) / np.sin(beta),  # y_gra
+                             z, w, l, h,
+                             v, 0, next_yaw, sigma]
+        else:
+            displacement = v * dt + a * dt ** 2 / 2
+            predict_state = [x_gra + displacement * np.cos(theta),
+                             y_gra + displacement * np.sin(theta),
+                             z, w, l, h,
+                             v + a * dt, a, theta, sigma]
+        return np.mat(predict_state).T  
     
     def StateToMeasure(self, state: np.mat) -> np.mat:
         """get state vector in the measure space
         """
-        pass
+        assert state.shape == (10, 1), "state vector number in BICYCLE must equal to 10"
+        
+        x_gra, y_gra, z, w, l, h, v, _, theta, sigma = state
+        
+        beta, _, _ = self.getBicBeta(l, sigma)
+        geo2gra_dist = self.graToGeoDist(l)
+        
+        if self.has_velo:
+            meas_state = [x_gra - geo2gra_dist * np.cos(theta),
+                          y_gra - geo2gra_dist * np.sin(theta),
+                          z, w, l, h,
+                          v * np.cos(theta + beta),
+                          v * np.sin(theta + beta),
+                          theta]
+        else:
+            meas_state = [x_gra - geo2gra_dist * np.cos(theta),
+                          y_gra - geo2gra_dist * np.sin(theta),
+                          z, w, l, h,
+                          theta]
+        
+        return np.mat(meas_state).T
+    
+    def getBicBeta(self, length: float, sigma: float) ->  float:
+        """get the angle between the object velocity and the 
+        X-axis of the coordinate system
+
+        Args:
+            length (float): object length
+            sigma (float): the steering angle, radians
+
+        Returns:
+            float: the angle between the object velocity and X-axis, radians
+        """
+        
+        lf, lr = length * self.w_r * self.lf_r, length * self.w_r * (1 - self.lf_r)
+        beta = np.arctan(lr / (lr + lf) * np.tan(sigma))
+        return beta, lf, lr
+        
+    
+    def geoCenterToGraCenter(self, geo_center: list, theta: float, length: float) -> np.ndarray:
+        """from geo center to gra cener
+
+        Args:
+            geo_center (list): object geometric center
+            theta (float): object heading yaw
+            length (float): object length
+
+        Returns:
+            np.ndarray: object gravity center
+        """
+        geo2gra_dist = self.graToGeoDist(length)
+        gra_center = [geo_center[0] + geo2gra_dist * np.cos(theta),
+                      geo_center[1] + geo2gra_dist * np.sin(theta)]
+        return np.array(gra_center)
+    
+    def graCenterToGeoCenter(self, gra_center: list, theta: float, length: float) -> np.ndarray:
+        """from gra center to geo cener
+
+        Args:
+            gra_center (list): object gravity center
+            theta (float): object heading yaw
+            length (float): object length
+
+        Returns:
+            np.ndarray: object geometric center
+        """
+        geo2gra_dist = self.graToGeoDist(length)
+        geo_center = [gra_center[0] - geo2gra_dist * np.cos(theta),
+                      gra_center[1] - geo2gra_dist * np.sin(theta)]
+        return np.array(geo_center)
+    
+    def graToGeoDist(self, length: float) -> float:
+        """get gra center to geo center distance
+
+        Args:
+            length (float): object length
+
+        Returns:
+            float: gra center to geo center distance
+        """
+        return length * self.w_r * (0.5 - self.lf_r)
     
     @staticmethod
     def warpResYawToPi(res: np.mat) -> np.mat:
@@ -560,12 +735,17 @@ class BICYCLE(ABC_MODEL):
         state[-2, 0] = warp_to_pi(state[-2, 0])
         return state
     
-    @staticmethod
-    def getOutputInfo(state: np.mat) -> np.array:
+    def getOutputInfo(self, state: np.mat) -> np.array:
         """convert state vector in the filter to the output format
         Note that, tra score will be process later
         """
-        pass
+
+        rotation = Quaternion(axis=(0, 0, 1), radians=state[-2, 0]).q
+        geo_center = self.graCenterToGeoCenter(gra_center=[state[0, 0], state[1, 0]],
+                                               theta=state[-2, 0],
+                                               length=state[4, 0])
+        list_state = geo_center + state.T.tolist()[0][2:8] + rotation.tolist()
+        return np.array(list_state)
     
         
     
