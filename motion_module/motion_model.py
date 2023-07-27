@@ -512,7 +512,7 @@ class BICYCLE(ABC_MODEL):
             cls_name = CLASS_STR_TO_SEG_CLASS[cls_label]
             vector_p = BIC_INIT_EKFP[cls_name] if cls_name in BIC_INIT_EKFP else BIC_INIT_EKFP['bicycle']
         else:
-            vector_p = BIC_INIT_EKFP['bicycle']
+            vector_p = BIC_INIT_EKFP['bicycle'] if cls_label == 0 else [10, 10, 10, 10, 10, 10, 1000, 10, 10, 10]
         
         return np.mat(np.diag(vector_p))
     

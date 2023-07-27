@@ -2,10 +2,17 @@ basic:
   has_velo: True       # CenterPoint detector has velo info
   LiDAR_interval: 0.5  # the interval between two adjacent frames of the LiDAR scan, NuScenes: 2HZ
   CLASS_NUM: 7         # number of tracking category, NuScenes: 7
-  # CLASS_LABEL: 'bicycle': 0, 'bus': 1, 'car': 2, 'motorcycle': 3, 'pedestrian': 4, 'trailer': 5, 'truck': 6
+
+  # CLASS_LABEL: {'bicycle': 0, 
+  #               'bus': 1, 
+  #               'car': 2, 
+  #               'motorcycle': 3, 
+  #               'pedestrian': 4, 
+  #               'trailer': 5, 
+  #               'truck': 6}
 
 preprocessing:
-  SF_thre: {0: 0.14, 3: 0.12, 1: 0, 2: 0.16, 5: 0.1, 6: 0, 4: 0.16}
+  SF_thre: {0: 0.14, 3: 0.16, 1: 0, 2: 0.16, 5: 0.1, 6: 0, 4: 0.16}
   NMS_thre: 0.08
   NMS_type: blend_nms  # blend_nms, no_blend_nms, blend_soft_nms
   NMS_metric: iou_bev  # iou_bev, iou_3d, giou_bev, giou_3d, d_eucl
@@ -14,7 +21,7 @@ association:
   category_metrics: {1: 'giou_bev', 0: 'giou_3d', 2: 'giou_3d', 3: 'giou_3d', 4: 'giou_3d', 5: 'giou_3d', 6: 'giou_3d'}
   second_metric: 'giou_bev'
   two_stage: True  # Whether to use two-stage data association
-  first_thre: {1: 1.5, 0: 1.5, 2: 1.5, 3: 1.5, 4: 1.5, 5: 1.5, 6: 1.5}  # category-specific one-stage thresholds
+  first_thre: {1: 1.335, 0: 1.55, 2: 1.31, 3: 1.44, 4: 1.685, 5: 1.25, 6: 1.21}  # category-specific one-stage thresholds
   second_thre: {0: 1.0}  # two-stage thresholds
   algorithm : 'Hungarian'  # Greedy, Hungarian, Mutual Nearest Neighbor(MNN)
 
@@ -28,7 +35,7 @@ motion_model:
   model: {1: 'CTRA', 0: 'BICYCLE', 2: 'CTRA', 3: 'BICYCLE', 4: 'CTRA', 5: 'CA', 6: 'CTRA'}
 
 life_cycle:
-  max_age: {1: 10, 0: 10, 2: 10, 3: 10, 4: 10, 5: 10, 6: 10}
+  max_age: {1: 10, 0: 10, 2: 15, 3: 20, 4: 10, 5: 10, 6: 20}
   min_hit: {1: 1, 0: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1}
   decay_rate: {0: 0.05, 3: 0.1, 1: 0.3, 2: 0.2, 5: 0.15, 6: 0.25, 4: 0.15}
 

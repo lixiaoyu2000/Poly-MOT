@@ -62,7 +62,7 @@ class KalmanFilter:
         """
         if det is None: raise("detection cannot be None")
         
-        mea_attr = ('center', 'wlh', 'velocity', 'yaw') if self.has_velo else ('translation', 'size', 'yaw')
+        mea_attr = ('center', 'wlh', 'velocity', 'yaw') if self.has_velo else ('center', 'wlh', 'yaw')
         list_det = concat_box_attr(det['nusc_box'], *mea_attr)
         if self.has_velo: list_det.pop(8)
         

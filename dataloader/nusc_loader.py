@@ -69,7 +69,7 @@ class NuScenesloader:
         # corner case, no det left
         else: keep = keep_num = 0
 
-        print(f"Total {len(list_dets) - keep_num} bboxes are filtered; "
+        print(f"\n Total {len(list_dets) - keep_num} bboxes are filtered; "
               f"{len(list_dets) - len(np_dets)} during SF, "
               f"{len(np_dets) - keep_num} during NMS, "
               f"Still {keep_num} bboxes left. "
