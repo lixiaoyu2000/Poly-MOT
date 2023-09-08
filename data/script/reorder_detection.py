@@ -44,6 +44,7 @@ def reorder_detection(detector_path, dataset_path, dataset_name='NuScenes',
 
         # output file
         version = 'val' if dataset_version == "trainval" else 'test'
+        os.makedirs(OUTPUT_ROOT_PATH + version, exist_ok=True)
         OUTPUT_PATH = OUTPUT_ROOT_PATH + version + f"/{version}_{detector_name}.json"
         print(f"write order detection file to {OUTPUT_PATH}")
         json.dump(order_file, open(OUTPUT_PATH, "w"))

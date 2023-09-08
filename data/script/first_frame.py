@@ -42,6 +42,7 @@ def extract_first_token(dataset_path, detector_path, dataset_name='NuScenes', da
         assert len(first_token_table) == seq_num, "wrong detection result"
 
         # write token table
+        os.makedirs(FIRST_TOKEN_ROOT_PATH + dataset_version, exist_ok=True)
         FIRST_TOKEN_PATH = FIRST_TOKEN_ROOT_PATH + dataset_version + "/nusc_first_token.json"
         print(f"write token table to {FIRST_TOKEN_PATH}")
         json.dump(first_token_table, open(FIRST_TOKEN_PATH, "w"))
