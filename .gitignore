@@ -1,1 +1,3 @@
 *.json
+result/
+eval_result*/

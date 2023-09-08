@@ -1,4 +1,4 @@
-name: polymotv2
+name: polymot
 dependencies:
   - python=3.7
   - pip=21.1.1
