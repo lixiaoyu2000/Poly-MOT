@@ -152,9 +152,9 @@ Tracking evaluation will be performed automatically after tracking all scenarios
 
 ## Visualization
 Give the box to render in the specified format and the token of the background to get the trajectory rendering map. For example, `black` boxes represent detection results, and `other colored` boxes represent existing trajectories, see the following:
-<div align=center><img width="500" height="500" src="https://github.com/lixiaoyu2000/Poly-MOT/blob/main/docs/Visualization.png"/></div>
+<div align=center><img width="500" height="500" src="https://github.com/lixiaoyu2000/Poly-MOT/blob/main/docs/2.png"/></div>
 
-You can run the Jupyer notebook [Visualization.ipynb]().
+You can run the Jupyer notebook [Visualization.ipynb](https://github.com/lixiaoyu2000/Poly-MOT/blob/main/utils/Visualization.ipynb).
 
 ## Contact
 
