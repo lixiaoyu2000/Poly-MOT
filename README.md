@@ -43,7 +43,7 @@ Additionally, we introduce a two-stage data association strategy to ensure that 
 ### Implemented functions
 - 2023-09-08. In this version, we implemented API for the `nuScenes` dataset, five Similarity metrics(giou3d, gioubev, iou3d, ioubev, eucl), three Motion models(CTRA, Bicycle, CA), one NMS method(Classic NMS), three matching methods(Greedy, Hungarian, MNN).
 
-### TODO
+### TODO list
 - 2023-09-08. Two motion models(CV, CTRV), more NMS method, make d_eucl parallel;
 
 
@@ -144,6 +144,7 @@ Download data and organize it as follows:
 
 #### Config
 All hyperparameters are encapsulated in `config/nusc_config.yaml`, you can change the `yaml` file to customize your own tracker.
+**The accuracy in the paper can be reproduced through the parameters above the current `nusc_config.yaml`.**
 
 #### Running
 After downloading and organizing the detection files, you can simply run:
