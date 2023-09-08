@@ -3,8 +3,8 @@ get first frame token for every seq on the NuScenes dataset
 TODO: support Waymo dataset
 """
 
-import json
-import os
+import os, json, sys
+sys.path.append('../..')
 from utils.io import load_file
 from tqdm import tqdm
 from nuscenes.nuscenes import NuScenes
@@ -48,4 +48,13 @@ def extract_first_token(dataset_path, detector_path, dataset_name='NuScenes', da
 
     else:
         raise Exception("Waymo dataset is not currently supported")
+
+
+if __name__ == "__main__":
+    extract_first_token(
+        dataset_path='/mnt/share/sda-8T/rj/Dateset/Nuscenes/data/nuscenes',
+        detector_path='../detector/test/test_largeKernel.json',
+        dataset_name='NuScenes',
+        dataset_version='test'
+    )
 

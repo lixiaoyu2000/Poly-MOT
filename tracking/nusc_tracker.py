@@ -7,6 +7,7 @@ TODO: delete debug log in the release version
 
 import pdb
 import numpy as np
+from pre_processing import blend_nms
 from .nusc_trajectory import Trajectory
 from data.script.NUSC_CONSTANT import *
 from utils.matching import Hungarian
@@ -263,24 +264,23 @@ class Tracker:
 
         # [cls_num, det_num, tra_num], True denotes valid (det label == tra label == cls idx)
         valid_mask = mask_tras_dets(self.cls_num, det_labels, tra_labels)
-        self.tra_cost_infos = {'np_dets': self.tra_infos['np_tras'][:, :-3],
-                               'np_dets_bottom_corners': self.tra_infos['np_tras_bottom_corners']}
+        tra_cost_infos = {'np_dets': self.tra_infos['np_tras'][:, :-3], 'np_dets_bottom_corners': self.tra_infos['np_tras_bottom_corners']}
 
         if self.fast:
             # metrics only have giou_3d/giou_bev
-            two_cost, first_cost = giou_3d(self.det_infos, self.tra_cost_infos)
+            two_cost, first_cost = giou_3d(self.det_infos, tra_cost_infos)
             first_cost = first_cost[None, :, :].repeat(self.cls_num, axis=0)
             first_cost[self.re_metrics['giou_bev']] = two_cost
         else:
-            two_cost = globals()[self.second_metric](self.det_infos, self.tra_cost_infos)
+            two_cost = globals()[self.second_metric](self.det_infos, tra_cost_infos)
             first_cost = np.zeros((self.cls_num, det_num, tra_num))
             for metric, cls_list in self.re_metrics.items():
                 # True denotes invalid(the object's category is not specific)
-                self.tra_cost_infos['mask'] = spec_metric_mask(cls_list, det_labels, tra_labels)
+                tra_cost_infos['mask'] = spec_metric_mask(cls_list, det_labels, tra_labels)
                 if metric in METRIC:
-                    _, cost1 = globals()[metric](self.det_infos, self.tra_cost_infos)
+                    _, cost1 = globals()[metric](self.det_infos, tra_cost_infos)
                 else:
-                    cost1 = globals()[metric](self.det_infos, self.tra_cost_infos)
+                    cost1 = globals()[metric](self.det_infos, tra_cost_infos)
                 first_cost[cls_list] = cost1
 
         # mask invalid value
@@ -332,7 +332,7 @@ class Tracker:
         :return: dict, merge active tracklets and tentative tracklets
         """
         return {**self.active_tras, **self.tentative_tras}
-    
+
     def post_nms_tras(self, data_info) -> None:
         """
         use post-predict to reduce FP prediction
@@ -343,21 +343,20 @@ class Tracker:
         post_metric = self.post_nms_cfg['NMS_metric']
         post_thre = self.post_nms_cfg['NMS_thre']
         post_type = self.post_nms_cfg['NMS_type']
-        tmp_tra_infos = {'np_dets': data_info['np_track_res'][0: -3], 
-                         'np_dets_bottom_corners': data_info['bm_track_res']}
+        tmp_tra_infos = {'np_dets': np.array(data_info['np_track_res'])[:, :-3],
+                         'np_dets_bottom_corners': np.array(data_info['bm_track_res'])}
         keep = globals()[post_type](box_infos=tmp_tra_infos, metrics=post_metric, thre=post_thre)
-        if len(keep) == 0: 
+        if len(keep) == 0:
             data_info.update({'no_val_track_result': True})
-        else: 
-            data_info['np_track_res'] = data_info['np_track_res'][keep]
-            data_info['box_track_res'] = data_info['box_track_res'][keep]
+        else:
+            data_info['np_track_res'] = np.array(data_info['np_track_res'])[keep].tolist()
+            data_info['box_track_res'] = np.array(data_info['box_track_res'])[keep].tolist()
 
     def debug(self) -> None:
         """
-        only for debug
+        only for debug, check whether the trajectory status is repeated
         TODO: delete at public version
         """
-        # 检查三类轨迹是否有重复的key
         assert len(self.tentative_tras.keys() & self.active_tras.keys()) == 0
         assert len(self.active_tras.keys() & self.dead_tras.keys()) == 0
         assert len(self.tentative_tras.keys() & self.dead_tras.keys()) == 0

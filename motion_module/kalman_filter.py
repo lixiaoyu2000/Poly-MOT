@@ -60,7 +60,7 @@ class KalmanFilter:
         Returns:
             np.array: measurement for updating filter
         """
-        if det is None: raise("detection cannot be None")
+        if det is None: raise "detection cannot be None"
         
         mea_attr = ('center', 'wlh', 'velocity', 'yaw') if self.has_velo else ('center', 'wlh', 'yaw')
         list_det = concat_box_attr(det['nusc_box'], *mea_attr)

@@ -8,4 +8,5 @@ shapely
 pyquaternion
 line_profiler
 lap
+pyyaml
 

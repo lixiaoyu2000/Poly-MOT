@@ -23,7 +23,7 @@ class ABC_MODEL(abc.ABC):
         """from detection init tracklet
 
         Args:
-            det (dict): detection infos under different data format.
+            det_infos (dict): detection infos under different data format.
             {
                 'nusc_box': NuscBox,
                 'np_array': np.array,
@@ -81,9 +81,9 @@ class ABC_MODEL(abc.ABC):
             np.mat: [measure dim, state dim], state to measure transition matrix
         """
         pass
-    
+
     @abc.abstractmethod
-    def getOutputInfo(state: np.mat) -> np.array:
+    def getOutputInfo(self, state: np.mat) -> np.array:
         """convert state vector in the filter to the output format
         Note that, tra score will be process later
         Args:
@@ -109,6 +109,7 @@ class CA(ABC_MODEL):
         Measure vector: [x, y, z, w, l, h, (vx, vy, optional), ry]
     """
     def __init__(self, has_velo: bool, dt: float) -> None:
+        super().__init__()
         self.has_velo, self.dt, self.SD = has_velo, dt, 13
         self.MD = 9 if self.has_velo else 7
     
@@ -190,9 +191,8 @@ class CA(ABC_MODEL):
                         [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
         return H
-    
-    @staticmethod
-    def getOutputInfo(state: np.mat) -> np.array:
+
+    def getOutputInfo(self, state: np.mat) -> np.array:
         """convert state vector in the filter to the output format
         Note that, tra score will be process later
         """
@@ -237,6 +237,7 @@ class CTRA(ABC_MODEL):
         Measure vector: [x, y, z, w, l, h, (vx, vy, optional), ry]
     """
     def __init__(self, has_velo: bool, dt: float) -> None:
+        super().__init__()
         self.has_velo, self.dt, self.SD = has_velo, dt, 10
         self.MD = 9 if self.has_velo else 7
         
@@ -415,6 +416,14 @@ class CTRA(ABC_MODEL):
                         [0, 0, 0, 0, 0, 1,        0, 0,           0, 0],
                         [0, 0, 0, 0, 0, 0,        0, 0,           1, 0]])
         return H
+
+    def getOutputInfo(self, state: np.mat) -> np.array:
+        """convert state vector in the filter to the output format
+        Note that, tra score will be process later
+        """
+        rotation = Quaternion(axis=(0, 0, 1), radians=state[-2, 0]).q
+        list_state = state.T.tolist()[0][:8] + rotation.tolist()
+        return np.array(list_state)
     
     @staticmethod
     def warpResYawToPi(res: np.mat) -> np.mat:
@@ -443,15 +452,6 @@ class CTRA(ABC_MODEL):
         """
         state[-2, 0] = warp_to_pi(state[-2, 0])
         return state
-    
-    @staticmethod
-    def getOutputInfo(state: np.mat) -> np.array:
-        """convert state vector in the filter to the output format
-        Note that, tra score will be process later
-        """
-        rotation = Quaternion(axis=(0, 0, 1), radians=state[-2, 0]).q
-        list_state = state.T.tolist()[0][:8] + rotation.tolist()
-        return np.array(list_state)
 
 
 class BICYCLE(ABC_MODEL):
@@ -474,6 +474,7 @@ class BICYCLE(ABC_MODEL):
         for simple and fast solution
     """
     def __init__(self, has_velo: bool, dt: float) -> None:
+        super().__init__()
         self.has_velo, self.dt, self.SD = has_velo, dt, 10
         self.MD = 9 if self.has_velo else 7
         self.w_r, self.lf_r = 0.8, 0.5
@@ -648,7 +649,7 @@ class BICYCLE(ABC_MODEL):
         
         return np.mat(meas_state).T
     
-    def getBicBeta(self, length: float, sigma: float) ->  float:
+    def getBicBeta(self, length: float, sigma: float) -> Tuple[float, float, float]:
         """get the angle between the object velocity and the 
         X-axis of the coordinate system
 
@@ -666,7 +667,7 @@ class BICYCLE(ABC_MODEL):
         
     
     def geoCenterToGraCenter(self, geo_center: list, theta: float, length: float) -> np.ndarray:
-        """from geo center to gra cener
+        """from geo center to gra center
 
         Args:
             geo_center (list): object geometric center
@@ -682,7 +683,7 @@ class BICYCLE(ABC_MODEL):
         return np.array(gra_center)
     
     def graCenterToGeoCenter(self, gra_center: list, theta: float, length: float) -> np.ndarray:
-        """from gra center to geo cener
+        """from gra center to geo center
 
         Args:
             gra_center (list): object gravity center
@@ -707,6 +708,18 @@ class BICYCLE(ABC_MODEL):
             float: gra center to geo center distance
         """
         return length * self.w_r * (0.5 - self.lf_r)
+
+    def getOutputInfo(self, state: np.mat) -> np.array:
+        """convert state vector in the filter to the output format
+        Note that, tra score will be process later
+        """
+
+        rotation = Quaternion(axis=(0, 0, 1), radians=state[-2, 0]).q
+        geo_center = self.graCenterToGeoCenter(gra_center=[state[0, 0], state[1, 0]],
+                                               theta=state[-2, 0],
+                                               length=state[4, 0])
+        list_state = geo_center.tolist() + state.T.tolist()[0][2:8] + rotation.tolist()
+        return np.array(list_state)
     
     @staticmethod
     def warpResYawToPi(res: np.mat) -> np.mat:
@@ -735,18 +748,7 @@ class BICYCLE(ABC_MODEL):
         """
         state[-2, 0] = warp_to_pi(state[-2, 0])
         return state
-    
-    def getOutputInfo(self, state: np.mat) -> np.array:
-        """convert state vector in the filter to the output format
-        Note that, tra score will be process later
-        """
 
-        rotation = Quaternion(axis=(0, 0, 1), radians=state[-2, 0]).q
-        geo_center = self.graCenterToGeoCenter(gra_center=[state[0, 0], state[1, 0]],
-                                               theta=state[-2, 0],
-                                               length=state[4, 0])
-        list_state = geo_center.tolist() + state.T.tolist()[0][2:8] + rotation.tolist()
-        return np.array(list_state)
     
         
     

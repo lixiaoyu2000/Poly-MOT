@@ -2,21 +2,20 @@
 Organize detector files in chronological order on the NuScenes dataset
 """
 
-import json
-import os
-from tqdm import tqdm
+import os, json, sys
+sys.path.append('../..')
 from utils.io import load_file
+from tqdm import tqdm
 from nuscenes.nuscenes import NuScenes
 
 OUTPUT_ROOT_PATH = "../detector/"
 
 
-def reorder_detection(detetion_path, dataset_path, first_token_path, dataset_name='NuScenes',
+def reorder_detection(detector_path, dataset_path, dataset_name='NuScenes',
                       dataset_version='trainval', detector_name='centerpoint'):
     """
-    :param detetion_path: path of detection file
+    :param detector_path: path of detection file
     :param dataset_path: root path of dataset file
-    :param first_token_path: path of first frame token for each seq
     :param dataset_name: name of dataset
     :param dataset_version: version(split) of dataset (trainval/test)
     :param detector_name: name of detector eg: CenterPoint..
@@ -31,8 +30,9 @@ def reorder_detection(detetion_path, dataset_path, first_token_path, dataset_nam
         frame_num = 6019 if dataset_version == 'trainval' else 6008
 
         # load detector file
-        chaos_detector_json = load_file(detetion_path)
+        chaos_detector_json = load_file(detector_path)
         assert len(chaos_detector_json['results']) == frame_num, "wrong detection result"
+        first_token_path = '../utils/first_token_table/{}/nusc_first_token.json'.format(dataset_version)
         all_token_table = from_first_to_all(nusc, first_token_path)
         assert len(all_token_table) == frame_num
 
@@ -45,7 +45,7 @@ def reorder_detection(detetion_path, dataset_path, first_token_path, dataset_nam
         # output file
         version = 'val' if dataset_version == "trainval" else 'test'
         OUTPUT_PATH = OUTPUT_ROOT_PATH + version + f"/{version}_{detector_name}.json"
-        print(f"write order detetion file to {OUTPUT_PATH}")
+        print(f"write order detection file to {OUTPUT_PATH}")
         json.dump(order_file, open(OUTPUT_PATH, "w"))
 
     else:
@@ -68,3 +68,12 @@ def from_first_to_all(nusc, first_token_path):
             curr_token = nusc.get('sample', curr_token)['next']
 
     return all_token_table
+
+if __name__ == "__main__":
+    reorder_detection(
+        detector_path='../detector/test/test_largeKernel.json',
+        dataset_path='/mnt/share/sda-8T/rj/Dateset/Nuscenes/data/nuscenes',
+        dataset_name='NuScenes',
+        dataset_version='test',
+        detector_name='largeKernel2'
+    )
