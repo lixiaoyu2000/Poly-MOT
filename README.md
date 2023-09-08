@@ -97,6 +97,11 @@ You can find detailed results on the NuScenes test set on this [website](https:/
 
 ### 2. Required Data
 
+#### Download 3D detector
+
+We strongly recommend that you download the detector file `.json` from official websites of Pioneer detector works ([CenterPoint](https://github.com/tianweiy/CenterPoint), etc.).
+
+
 #### Prepare the token table for online inference
 
 `sample token table` is used to identify the first frame of each scene.
@@ -155,6 +160,7 @@ Give the box to render in the specified format and the token of the background t
 <div align=center><img width="500" height="500" src="https://github.com/lixiaoyu2000/Poly-MOT/blob/main/docs/2.png"/></div>
 
 You can run the Jupyer notebook [Visualization.ipynb](https://github.com/lixiaoyu2000/Poly-MOT/blob/main/utils/Visualization.ipynb).
+
 
 ## Contact
 
