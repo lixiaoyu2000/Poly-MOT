@@ -41,7 +41,7 @@ Additionally, we introduce a two-stage data association strategy to ensure that 
 ## Release notes
 
 ### Implemented functions
-- 2023-09-08. In this version, we implemented API for the `nuScenes` dataset, five Similarity metrics(giou3d, gioubev, iou3d, ioubev, eucl), three Motion models(CTRA, Bicycle, CA), one NMS method(Classic NMS).
+- 2023-09-08. In this version, we implemented API for the `nuScenes` dataset, five Similarity metrics(giou3d, gioubev, iou3d, ioubev, eucl), three Motion models(CTRA, Bicycle, CA), one NMS method(Classic NMS), three matching methods(Greedy, Hungarian, MNN).
 
 ### TODO
 - 2023-09-08. Two motion models(CV, CTRV), more NMS method, make d_eucl parallel;
