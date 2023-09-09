@@ -100,7 +100,7 @@ You can find detailed results on the NuScenes test set on this [website](https:/
 #### Download 3D detector
 
 We strongly recommend that you download the detector file `.json` from official websites of Pioneer detector works ([CenterPoint](https://github.com/tianweiy/CenterPoint), etc.).
-
+In online tracking, we need to use detector files in `.json` format.
 
 #### Prepare the token table for online inference
 
@@ -111,7 +111,8 @@ cd Poly-MOT/data/script
 python first_frame.py
 ```
 
-The file path within the function `extract_first_token` needs to be modified.
+The file path(detector path, database path, etc.) within the function `extract_first_token` needs to be modified.
+The result will be output in `data/utils/first_token_table/{version}/nusc_first_token.json`.
 
 #### Prepare the detector for online inference
 
@@ -123,7 +124,8 @@ cd Poly-MOT/data/script
 python reorder_detection.py
 ```
 
-The file path within the function `reorder_detection` needs to be modified.
+The file path(detector path, database path, token path, etc.) within the function `reorder_detection` needs to be modified.
+The result will be output in `data/detector/first_token_table/{version}/{version}_{detector_name}.json`.
 
 #### Prepare the database for evaluation
 
@@ -151,6 +153,12 @@ After downloading and organizing the detection files, you can simply run:
 ```
 python test.py
 ```
+The file path(detector path, token path, database path, etc.) within the file needs to be modified. 
+Besides, you can also specify the file path using the terminal command, as following:
+```
+python test.py --eval_path <eval path>
+```
+
 
 #### Evaluation
 Tracking evaluation will be performed automatically after tracking all scenarios.
