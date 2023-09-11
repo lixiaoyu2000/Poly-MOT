@@ -89,7 +89,7 @@ You can find detailed results on the NuScenes test set on this [website](https:/
 
 ## Use Poly-MOT
 
-### 1. Creat environment
+### 1. Create and activate environment
 ```
    conda env create -f environment.yaml  
    conda activate polymot
@@ -146,7 +146,7 @@ Download data and organize it as follows:
 
 #### Config
 All hyperparameters are encapsulated in `config/nusc_config.yaml`, you can change the `yaml` file to customize your own tracker.
-**The accuracy in the paper can be reproduced through the parameters above the current `nusc_config.yaml`.**
+**The accuracy with `CenterPoint` in the paper can be reproduced through the parameters above the current `nusc_config.yaml`.**
 
 #### Running
 After downloading and organizing the detection files, you can simply run:
