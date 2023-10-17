@@ -54,8 +54,7 @@ def extract_first_token(dataset_path, detector_path, dataset_name='NuScenes', da
 if __name__ == "__main__":
     extract_first_token(
         dataset_path='/mnt/share/sda-8T/rj/Dateset/Nuscenes/data/nuscenes',
-        detector_path='../detector/test/test_largeKernel.json',
+        detector_path='../detector/raw_detector/infos_val_10sweeps_withvelo_filter_True.json',
         dataset_name='NuScenes',
-        dataset_version='test'
+        dataset_version='trainval'
     )
-

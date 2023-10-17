@@ -72,9 +72,9 @@ def from_first_to_all(nusc, first_token_path):
 
 if __name__ == "__main__":
     reorder_detection(
-        detector_path='../detector/test/test_largeKernel.json',
+        detector_path='../detector/raw_detector/infos_val_10sweeps_withvelo_filter_True.json',
         dataset_path='/mnt/share/sda-8T/rj/Dateset/Nuscenes/data/nuscenes',
         dataset_name='NuScenes',
-        dataset_version='test',
-        detector_name='largeKernel2'
+        dataset_version='trainval',
+        detector_name='centerpoint'
     )
