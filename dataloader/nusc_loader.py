@@ -58,11 +58,11 @@ class NuScenesloader:
 
         # Score Filter based on category-specific thresholds
         np_dets = np.array([det for det in list_dets if det[-2] > self.SF_thre[det[-1]]])
-        box_dets, np_dets_bottom_corners = arraydet2box(np_dets)
-        assert len(np_dets) == len(box_dets) == len(np_dets_bottom_corners)
 
         # NMS, "blend" ref to blend all categories together during NMS
         if len(np_dets) != 0:
+            box_dets, np_dets_bottom_corners = arraydet2box(np_dets)
+            assert len(np_dets) == len(box_dets) == len(np_dets_bottom_corners)
             tmp_infos = {'np_dets': np_dets, 'np_dets_bottom_corners': np_dets_bottom_corners}
             keep = globals()[self.NMS_type](box_infos=tmp_infos, metrics=self.NMS_metric, thre=self.NMS_thre)
             keep_num = len(keep)

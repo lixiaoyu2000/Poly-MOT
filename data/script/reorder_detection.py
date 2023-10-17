@@ -44,6 +44,7 @@ def reorder_detection(detector_path, dataset_path, dataset_name='NuScenes',
 
         # output file
         version = 'val' if dataset_version == "trainval" else 'test'
+        os.makedirs(OUTPUT_ROOT_PATH + version, exist_ok=True)
         OUTPUT_PATH = OUTPUT_ROOT_PATH + version + f"/{version}_{detector_name}.json"
         print(f"write order detection file to {OUTPUT_PATH}")
         json.dump(order_file, open(OUTPUT_PATH, "w"))
@@ -71,9 +72,9 @@ def from_first_to_all(nusc, first_token_path):
 
 if __name__ == "__main__":
     reorder_detection(
-        detector_path='../detector/test/test_largeKernel.json',
+        detector_path='../detector/raw_detector/infos_val_10sweeps_withvelo_filter_True.json',
         dataset_path='/mnt/share/sda-8T/rj/Dateset/Nuscenes/data/nuscenes',
         dataset_name='NuScenes',
-        dataset_version='test',
-        detector_name='largeKernel2'
+        dataset_version='trainval',
+        detector_name='centerpoint'
     )

@@ -35,15 +35,15 @@ Additionally, we introduce a two-stage data association strategy to ensure that 
 
 - 2023-03-01. Our method ranks first among all methods on the NuScenes tracking [benchmark](https://www.nuscenes.org/tracking?externalData=all&mapData=all&modalities=Any) :fire:.
 - 2023-07-01. Poly-MOT is accepted at IROS 2023 :zap:.
-- 2023-08-01. Warm-up :fire:! The official repo and paper have been released. We will release our code **in early-September.**
-- 2023-09-08. Version 1.0 has been released.
+- 2023-08-01. Warm-up :fire:! The official repo and paper have been released. We will release our code in early-September.
+- 2023-09-08. **Version 1.0 has been released.**
 
 ## Release notes
 
 ### Implemented functions
-- 2023-09-08. In this version, we implemented API for the `nuScenes` dataset, five Similarity metrics(giou3d, gioubev, iou3d, ioubev, eucl), three Motion models(CTRA, Bicycle, CA), one NMS method(Classic NMS).
+- 2023-09-08. In this version, we implemented API for the `nuScenes` dataset, five Similarity metrics(giou3d, gioubev, iou3d, ioubev, eucl), three Motion models(CTRA, Bicycle, CA), one NMS method(Classic NMS), three matching methods(Greedy, Hungarian, MNN).
 
-### TODO
+### TODO list
 - 2023-09-08. Two motion models(CV, CTRV), more NMS method, make d_eucl parallel;
 
 
@@ -89,13 +89,18 @@ You can find detailed results on the NuScenes test set on this [website](https:/
 
 ## Use Poly-MOT
 
-### 1. Creat environment
+### 1. Create and activate environment
 ```
    conda env create -f environment.yaml  
    conda activate polymot
 ```
 
 ### 2. Required Data
+
+#### Download 3D detector
+
+We strongly recommend that you download the detector file `.json` from official websites of Pioneer detector works ([CenterPoint](https://github.com/tianweiy/CenterPoint), etc.).
+In online tracking, we need to use detector files in `.json` format.
 
 #### Prepare the token table for online inference
 
@@ -106,7 +111,8 @@ cd Poly-MOT/data/script
 python first_frame.py
 ```
 
-The file path within the function `extract_first_token` needs to be modified.
+The file path(detector path, database path, etc.) within the function `extract_first_token` needs to be modified.
+The result will be output in `data/utils/first_token_table/{version}/nusc_first_token.json`.
 
 #### Prepare the detector for online inference
 
@@ -118,7 +124,8 @@ cd Poly-MOT/data/script
 python reorder_detection.py
 ```
 
-The file path within the function `reorder_detection` needs to be modified.
+The file path(detector path, database path, token path, etc.) within the function `reorder_detection` needs to be modified.
+The result will be output in `data/detector/first_token_table/{version}/{version}_{detector_name}.json`.
 
 #### Prepare the database for evaluation
 
@@ -139,12 +146,19 @@ Download data and organize it as follows:
 
 #### Config
 All hyperparameters are encapsulated in `config/nusc_config.yaml`, you can change the `yaml` file to customize your own tracker.
+**The accuracy with `CenterPoint` in the paper can be reproduced through the parameters above the current `nusc_config.yaml`.**
 
 #### Running
 After downloading and organizing the detection files, you can simply run:
 ```
 python test.py
 ```
+The file path(detector path, token path, database path, etc.) within the file needs to be modified. 
+Besides, you can also specify the file path using the terminal command, as following:
+```
+python test.py --eval_path <eval path>
+```
+
 
 #### Evaluation
 Tracking evaluation will be performed automatically after tracking all scenarios.
@@ -152,9 +166,10 @@ Tracking evaluation will be performed automatically after tracking all scenarios
 
 ## Visualization
 Give the box to render in the specified format and the token of the background to get the trajectory rendering map. For example, `black` boxes represent detection results, and `other colored` boxes represent existing trajectories, see the following:
-<div align=center><img width="500" height="500" src="https://github.com/lixiaoyu2000/Poly-MOT/blob/main/docs/Visualization.png"/></div>
+<div align=center><img width="500" height="500" src="https://github.com/lixiaoyu2000/Poly-MOT/blob/main/docs/2.png"/></div>
 
-You can run the Jupyer notebook [Visualization.ipynb]().
+You can run the Jupyer notebook [Visualization.ipynb](https://github.com/lixiaoyu2000/Poly-MOT/blob/main/utils/Visualization.ipynb).
+
 
 ## Contact
 
