@@ -133,17 +133,52 @@ def d_eucl_s(box_a: NuscBox, box_b: NuscBox) -> float:
     return eucl_dis * punish_factor
 
 
-def d_eucl(boxes_a, boxes_b) -> np.array:
+def d_eucl(boxes_a, boxes_b):
     """
-    Serial implementation of Euclidean Distance with yaw angle punish
-    :param boxes_a: np.array[NuscBox], a collection of NuscBox
-    :param boxes_b: np.array[NuscBox], a collection of NuscBox
-    :return: Eucl distance between two collections
+    'np_dets': np.array, [det_num, 14](x, y, z, w, l, h, vx, vy, ry(orientation, 1x4), det_score, class_label)
+    :param boxes_a: dict, a collection of NuscBox info, keys must contain 'np_dets'
+    :param boxes_b: dict, a collection of NuscBox info, keys must contain 'np_dets'
+    :return:
     """
-    eucl_dis = np.zeros((len(boxes_a), len(boxes_b)))
-    for i, boxa in enumerate(boxes_a):
-        for j, boxb in enumerate(boxes_b):
-            eucl_dis[i, j] = d_eucl_s(boxa, boxb)
+    assert 'np_dets' in boxes_a, 'must contain specified keys'
+    assert 'np_dets' in boxes_b, 'must contain specified keys'
+
+    infos_a, infos_b = boxes_a['np_dets'], boxes_b['np_dets']  # [box_num, 14]
+
+    bool_mask, seq_mask = mask_between_boxes(infos_a[:, -1], infos_b[:, -1])
+    bool_mask, seq_mask = logical_or_mask(bool_mask, seq_mask, boxes_a, boxes_b)
+
+    if infos_a.ndim == 1: infos_a = infos_a[None, :]
+    if infos_b.ndim == 1: infos_b = infos_b[None, :]
+    assert infos_a.shape[1] == 14 and infos_b.shape[1] == 14, "dim must be 14"
+
+    xyzwlh_a1, xyzwlh_b1 = expand_dims(infos_a[:, 0:6], len(infos_b), 1), expand_dims(infos_b[:, 0:6], len(infos_a), 0)
+
+    deta = xyzwlh_a1 - xyzwlh_b1
+
+    elementwise_norms = np.linalg.norm(deta, ord=2, axis=2)
+
+    # Calculate the penalty angle , taking the quaternion
+    ry_a1, ry_b1 = infos_a[:, 8:12], infos_b[:, 8:12]
+
+    # Check the quaternion direction
+    ry_a1[:, -1] = np.where(ry_a1[:, -1] > 0, ry_a1[:, -1], -ry_a1[:, -1])
+    ry_b1[:, -1] = np.where(ry_b1[:, -1] > 0, ry_b1[:, -1], -ry_b1[:, -1])
+
+    # Extract the first element of each row and calculate the angle (radians)
+    angles_a1 = 2 * np.arccos(ry_a1[:, 0])
+    angles_b1 = 2 * np.arccos(ry_b1[:, 0])
+
+    angles_a, angles_b = expand_dims(angles_a1, len(angles_b1), 1), expand_dims(angles_b1, len(angles_a1), 0)
+    deta_angle = angles_a - angles_b
+    # Limit(-pi, pi)
+    deta_angle = np.abs(np.mod(deta_angle + np.pi, 2 * np.pi) - np.pi)
+
+    punish = np.ones_like(deta_angle) * 2 - np.cos(deta_angle)
+
+    eucl_dis = elementwise_norms * punish
+    eucl_dis[bool_mask] = np.inf
+
     return eucl_dis
 
 
