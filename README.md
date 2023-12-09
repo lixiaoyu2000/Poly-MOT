@@ -21,9 +21,25 @@ If you find this project useful in your research, please consider citing by :smi
 }
 ```
 
+## News
+
+- 2023-12-09. Warm-up :fire:! The official repo of [RockTrack](https://github.com/lixiaoyu2000/Rock-Track) has been released. We will release code soon. Welcome to follow.
+- 2023-09-08. **Version 1.0 has been released.**
+- 2023-07-01. Poly-MOT is accepted at IROS 2023 :zap:.
+- 2023-03-01. Our method ranks first among all methods on the NuScenes tracking [benchmark](https://www.nuscenes.org/tracking?externalData=all&mapData=all&modalities=Any) :fire:.
+
+## Release notes
+
+### Implemented functions
+- 2023-12-08. In this version, we make d_eucl parallel.
+- 2023-09-08. In this version, we implemented API for the `nuScenes` dataset, five Similarity metrics(giou3d, gioubev, iou3d, ioubev, eucl), three Motion models(CTRA, Bicycle, CA), one NMS method(Classic NMS), three matching methods(Greedy, Hungarian, MNN).
+
+### TODO list
+- 2023-09-08. Two motion models(CV, CTRV), more NMS method;
+
 ## Abstract
 We propose Poly-MOT, an efficient 3D MOT method based on the Tracking-By-Detection framework that enables the tracker to choose the most appropriate tracking criteria for each object category.
-Specifically, Poly-MOT leverages different motion models for various object categories to characterize distinct types of motion accurately. 
+Poly-MOT leverages different motion models for various object categories to characterize distinct types of motion accurately. 
 We also introduce the constraint of the rigid structure of objects into a specific motion model to accurately describe the highly nonlinear motion of the object.
 Additionally, we introduce a two-stage data association strategy to ensure that objects can find the optimal similarity metric from three custom metrics for their categories and reduce missing matches.
 
@@ -31,42 +47,23 @@ Additionally, we introduce a two-stage data association strategy to ensure that 
 <img src="https://github.com/lixiaoyu2000/Poly-MOT/blob/main/docs/Visualization.gif"/>
 </div>
 
-## News
-
-- 2023-03-01. Our method ranks first among all methods on the NuScenes tracking [benchmark](https://www.nuscenes.org/tracking?externalData=all&mapData=all&modalities=Any) :fire:.
-- 2023-07-01. Poly-MOT is accepted at IROS 2023 :zap:.
-- 2023-08-01. Warm-up :fire:! The official repo and paper have been released. We will release our code in early-September.
-- 2023-09-08. **Version 1.0 has been released.**
-- 2023-12-09. We will release '[RockTrack](https://github.com/lixiaoyu2000/Rock-Track): A 3D Robust Multi-Camera-Ken Multi-Object Tracking Framework' soon. Welcome to follow.
-
-## Release notes
-
-### Implemented functions
-- 2023-09-08. In this version, we implemented API for the `nuScenes` dataset, five Similarity metrics(giou3d, gioubev, iou3d, ioubev, eucl), three Motion models(CTRA, Bicycle, CA), one NMS method(Classic NMS), three matching methods(Greedy, Hungarian, MNN).
-- 2023-12-08. In this version, we make d_eucl parallel.
-
-### TODO list
-- 2023-09-08. Two motion models(CV, CTRV), more NMS method;
-
-
-
 ## Highlights
 
-- **Best-performance(75.4 AMOTA).:chart_with_upwards_trend:**
+- **Best-performance(75.4 AMOTA).** :chart_with_upwards_trend:
   - Poly-MOT enables the tracker to choose the most appropriate tracking criteria for each object category.
   - With the powerful detector [Largerkernel3D](https://github.com/dvlab-research/LargeKernel3D), Poly-MOT achieves 75.4 AMOTA on the NuScenes test set.
   - Poly-MOT achieves 73.1 AMOTA on the val set with [CenterPoint](https://github.com/tianweiy/CenterPoint) for a fair comparison.
   
-- **Real-time(0.3s per frame).:zap:**
+- **Real-time(0.3s per frame).** :zap:
   - Poly-MOT follows the Tracking-By-Detection(TBD) framework, and is learning-free.
   - During online tracking, No any additional input(including dataset, images, map, ...) needed besides the detector.
   - We first proposed the *half-parallel GIOU operator* under the `Python` implementation.
   - On the NuScenes, Poly-MOT can run at 3 FPS (Frame Per Second) on Intel 9940X.
   
-- **Strong-scalability(one-config-fit-all).:ledger:**
+- **Strong-scalability(one-config-fit-all).** :ledger:
   - Poly-MOT has integrated a variety of tracking technologies in the code, and uses `yaml` to manage these hyperparameters in a unified way, you can customize your own tracker arbitrarily.
   
-- **Well-readability(many comments).:clipboard:**
+- **Well-readability(many comments).** :clipboard:
   - We have recorded each tracking module's design reasons, effects, and ideas in the code. 
   - You can grasp our insight and even start discussing any comments with us.
 
