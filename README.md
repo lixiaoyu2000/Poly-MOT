@@ -37,6 +37,7 @@ Additionally, we introduce a two-stage data association strategy to ensure that 
 - 2023-07-01. Poly-MOT is accepted at IROS 2023 :zap:.
 - 2023-08-01. Warm-up :fire:! The official repo and paper have been released. We will release our code in early-September.
 - 2023-09-08. **Version 1.0 has been released.**
+- 2023-12-09. We will release '[RockTrack](https://github.com/lixiaoyu2000/Rock-Track): A 3D Robust Multi-Camera-Ken Multi-Object Tracking Framework' soon. Welcome to follow.
 
 ## Release notes
 
