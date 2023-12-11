@@ -8,7 +8,7 @@ Ref: https://en.wikipedia.org/wiki/Kalman_filter
 import pdb
 import numpy as np
 from .nusc_object import FrameObject
-from .motion_model import CA, CTRA, BICYCLE
+from .motion_model import CV, CTRV, BICYCLE,CA,CTRA
 from pre_processing import arraydet2box, concat_box_attr
 
 class KalmanFilter:
@@ -208,8 +208,8 @@ class ExtendKalmanFilter(KalmanFilter):
     def __init__(self, timestamp: int, config: dict, track_id: int, det_infos: dict) -> None:
         super().__init__(timestamp, config, track_id, det_infos)
         # set motion model, default Constant Acceleration and Turn Rate(CTRA) for EKF
-        self.model = globals()[self.model](self.has_velo, self.dt) if self.model in ['CTRA', 'BICYCLE'] \
-                     else globals()['CTRA'](self.has_velo, self.dt)
+        self.model = globals()[self.model](self.has_velo, self.dt) if self.model in ['CTRV', 'BICYCLE'] \
+                     else globals()['CTRV'](self.has_velo, self.dt)
         # Transition and Observation Matrices are changing in the EKF
         self.initialize(det_infos)
     
