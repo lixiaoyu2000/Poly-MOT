@@ -31,11 +31,12 @@ If you find this project useful in your research, please consider citing by :smi
 ## Release notes
 
 ### Implemented functions
-- 2023-12-08. In this version, we make d_eucl parallel.
+- 2023-12-12. In this version, we implemented two extra motion models (CV, CTRV).
+- 2023-12-08. In this version, we made d_eucl parallel.
 - 2023-09-08. In this version, we implemented API for the `nuScenes` dataset, five Similarity metrics(giou3d, gioubev, iou3d, ioubev, eucl), three Motion models(CTRA, Bicycle, CA), one NMS method(Classic NMS), three matching methods(Greedy, Hungarian, MNN).
 
 ### TODO list
-- 2023-09-08. Two motion models(CV, CTRV), more NMS method;
+- 2023-09-08. More NMS method;
 
 ## Abstract
 We propose Poly-MOT, an efficient 3D MOT method based on the Tracking-By-Detection framework that enables the tracker to choose the most appropriate tracking criteria for each object category.
