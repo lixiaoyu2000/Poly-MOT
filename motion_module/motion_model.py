@@ -592,7 +592,7 @@ class CTRV(ABC_MODEL):
 
     def getInitState(self, det_infos: dict) -> np.mat:
         """from detection init tracklet
-        Acceleration and yaw(turn) rate are both set to 0. when velociy
+        Yaw(turn) rate are set to 0. when velociy
         on X/Y-Axis are available, the combined velocity is also set to 0
         """
         init_state = np.zeros(shape=self.SD)

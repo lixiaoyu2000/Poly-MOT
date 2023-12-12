@@ -33,7 +33,7 @@ motion_model:
   # note the consistency of the linear relationship between the model and the filter
   # model: {1: 'CTRA', 0: 'BICYCLE', 2: 'CTRA', 3: 'BICYCLE', 4: 'CTRA', 5: 'CTRA', 6: 'CTRA'}
   filter: {1: 'ExtendKalmanFilter', 0: 'ExtendKalmanFilter', 2: 'ExtendKalmanFilter', 3: 'ExtendKalmanFilter', 4: 'ExtendKalmanFilter', 5: 'LinearKalmanFilter', 6: 'ExtendKalmanFilter'}
-  model: {1: 'CTRV', 0: 'BICYCLE', 2: 'CTRV', 3: 'BICYCLE', 4: 'CTRV', 5: 'CV', 6: 'CTRV'}
+  model: {1: 'CTRA', 0: 'BICYCLE', 2: 'CTRA', 3: 'BICYCLE', 4: 'CTRA', 5: 'CA', 6: 'CTRA'}
 
 life_cycle:
   max_age: {1: 10, 0: 10, 2: 15, 3: 20, 4: 10, 5: 10, 6: 20}
