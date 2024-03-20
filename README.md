@@ -23,6 +23,7 @@ If you find this project useful in your research, please consider citing by :smi
 
 ## News
 
+- 2024-03-20. Warm-up :fire:! We released [Fast-Poly](https://github.com/lixiaoyu2000/FastPoly), a fast version of Poly-MOT. Welcome to follow.
 - 2023-12-09. Warm-up :fire:! The official repo of [RockTrack](https://github.com/lixiaoyu2000/Rock-Track) has been released. We will release code soon. Welcome to follow.
 - 2023-09-08. **Version 1.0 has been released.**
 - 2023-07-01. Poly-MOT is accepted at IROS 2023 :zap:.
